@@ -86,8 +86,8 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
     if (file) {
       if (file.size > 5 * 1024 * 1024) { // 5MB limit
         toast({
-          title: "파일 크기 초과",
-          description: "파일 크기는 5MB 이하여야 합니다.",
+          title: "File Size Exceeded",
+          description: "File size must be 5MB or less.",
           variant: "destructive",
         });
         return;
@@ -237,7 +237,7 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
               name="workImage"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-semibold text-slate-700">작품 사진 (선택사항)</FormLabel>
+                  <FormLabel className="text-sm font-semibold text-slate-700">Work Photo (Optional)</FormLabel>
                   <FormControl>
                     <div className="space-y-4">
                       {/* Image upload button */}
@@ -254,7 +254,7 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
                           className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg cursor-pointer transition-colors"
                         >
                           <Upload className="h-4 w-4" />
-                          사진 업로드
+                          Upload Photo
                         </label>
                         {workImagePreview && (
                           <Button
@@ -265,7 +265,7 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
                             className="text-red-600 hover:text-red-700"
                           >
                             <X className="h-4 w-4 mr-1" />
-                            제거
+                            Remove
                           </Button>
                         )}
                       </div>
@@ -275,7 +275,7 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
                         <div className="relative">
                           <img
                             src={workImagePreview}
-                            alt="작품 미리보기"
+                            alt="Work preview"
                             className="w-full max-w-sm h-48 object-cover rounded-lg border border-slate-200"
                           />
                         </div>

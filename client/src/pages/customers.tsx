@@ -236,16 +236,16 @@ export default function Customers() {
                         </div>
                         
                         <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">상태</label>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
                           <select
                             value={editForm.status}
                             onChange={(e) => setEditForm(prev => ({ ...prev, status: e.target.value }))}
                             className="w-full p-2 border border-slate-300 rounded-md"
                           >
-                            <option value="waiting">대기중</option>
-                            <option value="In Progress">작업중</option>
-                            <option value="ready">완료</option>
-                            <option value="completed">수령완료</option>
+                            <option value="waiting">Waiting</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="ready">Ready</option>
+                            <option value="completed">Completed</option>
                           </select>
                         </div>
 
@@ -256,7 +256,7 @@ export default function Customers() {
                             className="flex-1"
                           >
                             <Save className="h-4 w-4 mr-2" />
-                            {updateMutation.isPending ? "저장 중..." : "저장"}
+                            {updateMutation.isPending ? "Saving..." : "Save"}
                           </Button>
                           <Button
                             onClick={cancelEdit}
@@ -264,7 +264,7 @@ export default function Customers() {
                             className="flex-1"
                           >
                             <X className="h-4 w-4 mr-2" />
-                            취소
+                            Cancel
                           </Button>
                         </div>
                       </div>
@@ -280,9 +280,9 @@ export default function Customers() {
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-slate-600">
                             <div>📞 {customer.phone}</div>
-                            <div>📧 {customer.email || "이메일 없음"}</div>
+                            <div>📧 {customer.email || "No email"}</div>
                             <div>📅 {typeof customer.workDate === 'string' ? customer.workDate : new Date(customer.workDate).toLocaleDateString()}</div>
-                            <div>🕒 등록: {typeof customer.createdAt === 'string' ? new Date(customer.createdAt).toLocaleDateString() : customer.createdAt.toLocaleDateString()}</div>
+                            <div>🕒 Registered: {typeof customer.createdAt === 'string' ? new Date(customer.createdAt).toLocaleDateString() : customer.createdAt.toLocaleDateString()}</div>
                           </div>
                         </div>
                         
@@ -291,7 +291,7 @@ export default function Customers() {
                           <div className="flex-shrink-0">
                             <img
                               src={customer.workImage}
-                              alt={`${customer.name}의 작업 이미지`}
+                              alt={`${customer.name}'s work image`}
                               className="w-24 h-24 object-cover rounded-lg border border-slate-200"
                             />
                           </div>
@@ -304,7 +304,7 @@ export default function Customers() {
                           className="flex-shrink-0"
                         >
                           <Edit2 className="h-4 w-4 mr-2" />
-                          수정
+                          Edit
                         </Button>
                       </div>
                     )}
