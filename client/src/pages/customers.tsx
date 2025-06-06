@@ -71,7 +71,7 @@ export default function Customers() {
       name: customer.name,
       phone: customer.phone,
       email: customer.email || "",
-      workDate: customer.workDate,
+      workDate: typeof customer.workDate === 'string' ? customer.workDate : customer.workDate.toISOString().split('T')[0],
       status: customer.status
     });
   };
@@ -86,7 +86,12 @@ export default function Customers() {
     
     updateMutation.mutate({
       id: editingCustomer.id,
-      updates: editForm
+      updates: {
+        name: editForm.name,
+        phone: editForm.phone,
+        email: editForm.email || null,
+        status: editForm.status
+      }
     });
   };
 
@@ -276,8 +281,8 @@ export default function Customers() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-slate-600">
                             <div>📞 {customer.phone}</div>
                             <div>📧 {customer.email || "이메일 없음"}</div>
-                            <div>📅 {customer.workDate}</div>
-                            <div>🕒 등록: {new Date(customer.createdAt).toLocaleDateString()}</div>
+                            <div>📅 {typeof customer.workDate === 'string' ? customer.workDate : new Date(customer.workDate).toLocaleDateString()}</div>
+                            <div>🕒 등록: {typeof customer.createdAt === 'string' ? new Date(customer.createdAt).toLocaleDateString() : customer.createdAt.toLocaleDateString()}</div>
                           </div>
                         </div>
                         <Button
