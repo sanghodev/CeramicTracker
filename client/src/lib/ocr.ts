@@ -1,5 +1,3 @@
-import { createWorker } from 'tesseract.js';
-
 export interface ExtractedData {
   name: string;
   phone: string;
@@ -16,37 +14,47 @@ export function createManualEntry(): ExtractedData {
   };
 }
 
-// Optimized OCR with better preprocessing
+// Auto-format phone number as user types
+export function formatPhoneNumber(value: string): string {
+  const digits = value.replace(/\D/g, '');
+  
+  if (digits.length === 0) return '';
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+}
+
+// Validate email format
+export function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+// Get suggested dates (today, tomorrow, common pottery class days)
+export function getSuggestedDates(): { label: string; value: string }[] {
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  
+  const nextWeek = new Date(today);
+  nextWeek.setDate(nextWeek.getDate() + 7);
+  
+  const suggestions = [
+    { label: 'Today', value: today.toISOString().split('T')[0] },
+    { label: 'Tomorrow', value: tomorrow.toISOString().split('T')[0] },
+    { label: 'Next Week', value: nextWeek.toISOString().split('T')[0] }
+  ];
+  
+  return suggestions;
+}
+
+// Simple placeholder function - returns manual entry template
 export async function processImageWithOCR(
   imageSrc: string,
   onProgress: (progress: number) => void
 ): Promise<ExtractedData | null> {
-  try {
-    onProgress(5);
-    
-    // Preprocess image for better OCR
-    const processedImageSrc = await preprocessImage(imageSrc);
-    onProgress(20);
-    
-    const worker = await createWorker('eng');
-    onProgress(40);
-    
-    const { data: { text } } = await worker.recognize(processedImageSrc);
-    await worker.terminate();
-    onProgress(90);
-    
-    console.log('Raw OCR text:', text);
-    
-    const parsed = parseExtractedText(text);
-    onProgress(100);
-    
-    // Always return something, even if empty
-    return parsed || createManualEntry();
-  } catch (error) {
-    console.error('OCR failed:', error);
-    onProgress(100);
-    return createManualEntry();
-  }
+  onProgress(100);
+  return createManualEntry();
 }
 
 // Image preprocessing to improve OCR accuracy for form-like text

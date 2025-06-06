@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Check, Save, X } from "lucide-react";
+import { Check, Save, X, CheckCircle, Calendar, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,7 @@ import { insertCustomerSchema } from "@shared/schema";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { formatPhoneNumber, isValidEmail, getSuggestedDates } from "@/lib/ocr";
 import { z } from "zod";
 
 const formSchema = insertCustomerSchema.extend({
@@ -25,6 +27,9 @@ interface CustomerFormProps {
 export default function CustomerForm({ initialData, onSubmitted, onCancelled }: CustomerFormProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [phoneValue, setPhoneValue] = useState(initialData?.phone || "");
+  const [emailValue, setEmailValue] = useState(initialData?.email || "");
+  const suggestedDates = getSuggestedDates();
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -61,6 +66,21 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
 
   const onSubmit = (data: FormData) => {
     createCustomerMutation.mutate(data);
+  };
+
+  const handlePhoneChange = (field: any, value: string) => {
+    const formatted = formatPhoneNumber(value);
+    setPhoneValue(formatted);
+    field.onChange(formatted);
+  };
+
+  const handleEmailChange = (field: any, value: string) => {
+    setEmailValue(value);
+    field.onChange(value);
+  };
+
+  const selectSuggestedDate = (dateValue: string) => {
+    form.setValue("workDate", dateValue);
   };
 
   return (
@@ -101,12 +121,19 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
                 <FormItem>
                   <FormLabel className="text-sm font-semibold text-slate-700">Phone Number</FormLabel>
                   <FormControl>
-                    <Input
-                      type="tel"
-                      placeholder="(555) 123-4567"
-                      {...field}
-                      className="px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                    />
+                    <div className="relative">
+                      <Input
+                        type="tel"
+                        placeholder="555-123-4567"
+                        value={phoneValue}
+                        onChange={(e) => handlePhoneChange(field, e.target.value)}
+                        maxLength={14}
+                        className="px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                      />
+                      {phoneValue.length === 14 && (
+                        <CheckCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-green-500" />
+                      )}
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -120,13 +147,18 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
                 <FormItem>
                   <FormLabel className="text-sm font-semibold text-slate-700">Email</FormLabel>
                   <FormControl>
-                    <Input
-                      type="email"
-                      placeholder="example@email.com"
-                      {...field}
-                      value={field.value || ""}
-                      className="px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                    />
+                    <div className="relative">
+                      <Input
+                        type="email"
+                        placeholder="customer@example.com"
+                        value={emailValue}
+                        onChange={(e) => handleEmailChange(field, e.target.value)}
+                        className="px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                      />
+                      {emailValue && isValidEmail(emailValue) && (
+                        <CheckCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-green-500" />
+                      )}
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
