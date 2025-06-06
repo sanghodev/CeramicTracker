@@ -48,7 +48,7 @@ export function getSuggestedDates(): { label: string; value: string }[] {
   return suggestions;
 }
 
-// OCR Space API for accurate text recognition
+// Google Vision API for accurate text recognition
 export async function processImageWithOCR(
   imageSrc: string,
   onProgress: (progress: number) => void
@@ -56,47 +56,44 @@ export async function processImageWithOCR(
   try {
     onProgress(10);
     
-    // Convert base64 to blob for upload
-    const response = await fetch(imageSrc);
-    const blob = await response.blob();
+    // Extract base64 image data
+    const base64Data = imageSrc.split(',')[1] || imageSrc;
     
     onProgress(30);
     
-    // Create form data for OCR Space API
-    const formData = new FormData();
-    formData.append('file', blob, 'image.jpg');
-    formData.append('apikey', 'helloworld'); // Free API key
-    formData.append('language', 'eng');
-    formData.append('isOverlayRequired', 'false');
-    formData.append('detectOrientation', 'true');
-    formData.append('scale', 'true');
-    
-    onProgress(50);
-    
-    // Call OCR Space API
-    const ocrResponse = await fetch('https://api.ocr.space/parse/image', {
+    // Call Google Vision API from server
+    const response = await fetch('/api/vision/text', {
       method: 'POST',
-      body: formData
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        image: base64Data
+      })
     });
     
-    onProgress(80);
+    onProgress(70);
     
-    const result = await ocrResponse.json();
+    if (!response.ok) {
+      throw new Error(`Vision API failed: ${response.status}`);
+    }
     
-    if (result.ParsedResults && result.ParsedResults.length > 0) {
-      const extractedText = result.ParsedResults[0].ParsedText;
-      console.log('OCR Space extracted text:', extractedText);
-      
-      const parsed = parseExtractedText(extractedText);
+    const result = await response.json();
+    
+    onProgress(90);
+    
+    if (result.text) {
+      console.log('Google Vision extracted text:', result.text);
+      const parsed = parseExtractedText(result.text);
       onProgress(100);
       return parsed;
     } else {
-      console.log('No text found by OCR Space API');
+      console.log('No text found by Google Vision API');
       onProgress(100);
       return createManualEntry();
     }
   } catch (error) {
-    console.error('OCR Space API failed:', error);
+    console.error('Google Vision API failed:', error);
     onProgress(100);
     return createManualEntry();
   }
