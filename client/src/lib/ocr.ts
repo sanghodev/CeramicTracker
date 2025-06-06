@@ -7,46 +7,68 @@ interface ExtractedData {
   workDate: string;
 }
 
+// Simple fallback function for manual entry when OCR fails
+export function createManualEntry(): ExtractedData {
+  return {
+    name: '',
+    phone: '',
+    email: '',
+    workDate: new Date().toISOString().split('T')[0]
+  };
+}
+
 export async function processImageWithOCR(
   imageSrc: string,
   onProgress: (progress: number) => void
 ): Promise<ExtractedData | null> {
   try {
+    onProgress(10);
+    
     const worker = await createWorker('eng', 1, {
       logger: (m) => {
         if (m.status === 'recognizing text') {
-          onProgress(Math.round(m.progress * 100));
+          onProgress(Math.round(20 + m.progress * 60));
         }
       },
     });
 
-    // Optimize OCR settings for better performance and accuracy
-    await worker.setParameters({
-      tessedit_pageseg_mode: 6, // Uniform block of text
-      tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@.-() ',
-    });
+    onProgress(25);
 
-    const { data: { text } } = await worker.recognize(imageSrc, {
-      rectangle: undefined, // Process full image
-    });
+    // Skip parameter setting to avoid type issues and improve speed
+
+    onProgress(30);
+
+    const { data: { text } } = await worker.recognize(imageSrc);
     
     await worker.terminate();
+    onProgress(100);
 
-    console.log('Extracted text:', text); // Debug log
+    console.log('Extracted text:', text);
 
     if (!text || text.trim().length === 0) {
-      return null;
+      console.log('No text found, returning manual entry template');
+      return createManualEntry();
     }
 
-    return parseExtractedText(text);
+    const parsed = parseExtractedText(text);
+    
+    // If no useful data was extracted, return manual entry template
+    if (!parsed.name && !parsed.phone && !parsed.email) {
+      console.log('No useful data extracted, returning manual entry template');
+      return createManualEntry();
+    }
+    
+    return parsed;
   } catch (error) {
     console.error('OCR processing failed:', error);
-    return null;
+    return createManualEntry();
   }
 }
 
 function parseExtractedText(text: string): ExtractedData {
-  const lines = text.split('\n').filter(line => line.trim());
+  const lines = text.split(/[\n\r]+/).filter(line => line.trim());
+  const allText = text.replace(/\s+/g, ' ').trim();
+  
   const data: ExtractedData = {
     name: '',
     phone: '',
@@ -54,43 +76,76 @@ function parseExtractedText(text: string): ExtractedData {
     workDate: new Date().toISOString().split('T')[0]
   };
 
+  // Enhanced phone number detection (multiple US formats)
+  const phonePatterns = [
+    /\(?([0-9]{3})\)?[-.\s]?([0-9]{3})[-.\s]?([0-9]{4})/,
+    /([0-9]{3})[-.\s]([0-9]{3})[-.\s]([0-9]{4})/,
+    /\+?1?[-.\s]?\(?([0-9]{3})\)?[-.\s]?([0-9]{3})[-.\s]?([0-9]{4})/
+  ];
+  
+  for (const pattern of phonePatterns) {
+    const match = allText.match(pattern);
+    if (match && !data.phone) {
+      data.phone = `(${match[1]}) ${match[2]}-${match[3]}`;
+      break;
+    }
+  }
+
+  // Enhanced email detection
+  const emailRegex = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/;
+  const emailMatch = allText.match(emailRegex);
+  if (emailMatch) {
+    data.email = emailMatch[1];
+  }
+
+  // Enhanced name detection
   lines.forEach(line => {
     const cleanLine = line.trim();
     
-    // Phone number detection (US formats)
-    const phoneRegex = /(\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4})/;
-    const phoneMatch = cleanLine.match(phoneRegex);
-    if (phoneMatch && !data.phone) {
-      data.phone = phoneMatch[1];
+    // Skip lines that contain numbers, @ symbols, or are too short/long
+    if (/[0-9@]/.test(cleanLine) || cleanLine.length < 2 || cleanLine.length > 40) {
+      return;
     }
     
-    // Email detection
-    const emailRegex = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/;
-    const emailMatch = cleanLine.match(emailRegex);
-    if (emailMatch && !data.email) {
-      data.email = emailMatch[1];
-    }
+    // Look for patterns that suggest a name
+    const namePatterns = [
+      /^[A-Z][a-z]+\s+[A-Z][a-z]+$/, // First Last
+      /^[A-Z][a-z]+\s+[A-Z]\.\s+[A-Z][a-z]+$/, // First M. Last
+      /^[A-Z][a-z]+\s+[A-Z][a-z]+\s+[A-Z][a-z]+$/, // First Middle Last
+    ];
     
-    // Name detection (English names, 2-30 characters, letters, spaces, apostrophes, hyphens)
-    const nameRegex = /^[A-Za-z\s\-']{2,30}$/;
-    if (nameRegex.test(cleanLine) && !data.name && !cleanLine.includes('@') && !phoneRegex.test(cleanLine)) {
-      data.name = cleanLine;
-    }
-    
-    // Date detection (various formats: MM/DD/YYYY, MM-DD-YYYY, YYYY-MM-DD, etc.)
-    const dateRegex = /(\d{1,2}[-./]\d{1,2}[-./]\d{4}|\d{4}[-./]\d{1,2}[-./]\d{1,2})/;
-    const dateMatch = cleanLine.match(dateRegex);
-    if (dateMatch && data.workDate === new Date().toISOString().split('T')[0]) {
-      const dateStr = dateMatch[1].replace(/[./]/g, '-');
-      // Convert MM/DD/YYYY to YYYY-MM-DD format if needed
-      const dateParts = dateStr.split('-');
-      if (dateParts[0].length === 2 && dateParts[2].length === 4) {
-        data.workDate = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
-      } else {
-        data.workDate = dateStr;
+    for (const pattern of namePatterns) {
+      if (pattern.test(cleanLine) && !data.name) {
+        data.name = cleanLine;
+        break;
       }
     }
   });
 
+  // Date detection with multiple formats
+  const datePatterns = [
+    /(\d{1,2})\/(\d{1,2})\/(\d{4})/, // MM/DD/YYYY
+    /(\d{1,2})-(\d{1,2})-(\d{4})/, // MM-DD-YYYY
+    /(\d{4})-(\d{1,2})-(\d{1,2})/, // YYYY-MM-DD
+    /(\d{1,2})\.(\d{1,2})\.(\d{4})/, // MM.DD.YYYY
+  ];
+
+  for (const pattern of datePatterns) {
+    const match = allText.match(pattern);
+    if (match) {
+      const [, part1, part2, part3] = match;
+      
+      // Check if it's already in YYYY-MM-DD format
+      if (part1.length === 4) {
+        data.workDate = `${part1}-${part2.padStart(2, '0')}-${part3.padStart(2, '0')}`;
+      } else {
+        // Assume MM/DD/YYYY format and convert
+        data.workDate = `${part3}-${part1.padStart(2, '0')}-${part2.padStart(2, '0')}`;
+      }
+      break;
+    }
+  }
+
+  console.log('Parsed data:', data);
   return data;
 }

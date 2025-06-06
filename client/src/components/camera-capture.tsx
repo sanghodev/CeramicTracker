@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
-import { Camera, Cog, RotateCcw } from "lucide-react";
+import { Camera, Cog, RotateCcw, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { processImageWithOCR } from "@/lib/ocr";
+import { processImageWithOCR, createManualEntry } from "@/lib/ocr";
 import { useToast } from "@/hooks/use-toast";
 
 interface CameraCaptureProps {
@@ -45,7 +45,7 @@ export default function CameraCapture({ onDataExtracted }: CameraCaptureProps) {
         onDataExtracted(extractedData);
         toast({
           title: "Text Extraction Complete",
-          description: "Customer information successfully extracted.",
+          description: "Customer information extracted. Please review and edit as needed.",
         });
       } else {
         toast({
@@ -74,6 +74,15 @@ export default function CameraCapture({ onDataExtracted }: CameraCaptureProps) {
     }
   };
 
+  const handleManualEntry = () => {
+    const manualData = createManualEntry();
+    onDataExtracted(manualData);
+    toast({
+      title: "Manual Entry Mode",
+      description: "Please fill in the customer information manually.",
+    });
+  };
+
   return (
     <section className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
       <div className="text-center space-y-4">
@@ -89,7 +98,7 @@ export default function CameraCapture({ onDataExtracted }: CameraCaptureProps) {
 
         {/* Camera Input */}
         {!capturedImage && (
-          <div className="relative">
+          <div className="space-y-3">
             <input
               ref={fileInputRef}
               type="file"
@@ -105,6 +114,20 @@ export default function CameraCapture({ onDataExtracted }: CameraCaptureProps) {
             >
               <Camera className="mr-3" size={20} />
               Take Photo
+            </Button>
+            
+            <div className="text-center">
+              <span className="text-slate-400 text-sm">or</span>
+            </div>
+            
+            <Button
+              onClick={handleManualEntry}
+              variant="outline"
+              className="w-full border-slate-300 text-slate-700 hover:bg-slate-50 font-medium py-4 px-6 rounded-xl transition-colors duration-200"
+              size="lg"
+            >
+              <Edit className="mr-3" size={20} />
+              Enter Manually
             </Button>
           </div>
         )}
