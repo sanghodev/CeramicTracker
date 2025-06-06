@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 
 const formSchema = insertCustomerSchema.extend({
-  workDate: z.string().min(1, "작업 날짜를 입력해주세요"),
+  workDate: z.string().min(1, "Please enter work date"),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -70,8 +70,8 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
           <div className="w-12 h-12 bg-secondary/10 rounded-full flex items-center justify-center mx-auto mb-3">
             <Check className="text-secondary" size={24} />
           </div>
-          <h3 className="text-lg font-bold text-slate-800">추출된 고객정보</h3>
-          <p className="text-sm text-slate-600">정보를 확인하고 수정한 후 저장하세요</p>
+          <h3 className="text-lg font-bold text-slate-800">Extracted Customer Information</h3>
+          <p className="text-sm text-slate-600">Review and edit the information before saving</p>
         </div>
 
         <Form {...form}>

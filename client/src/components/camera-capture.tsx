@@ -44,21 +44,21 @@ export default function CameraCapture({ onDataExtracted }: CameraCaptureProps) {
       if (extractedData) {
         onDataExtracted(extractedData);
         toast({
-          title: "텍스트 추출 완료",
-          description: "고객 정보를 성공적으로 추출했습니다.",
+          title: "Text Extraction Complete",
+          description: "Customer information successfully extracted.",
         });
       } else {
         toast({
-          title: "추출 실패",
-          description: "텍스트를 인식할 수 없습니다. 다시 시도해주세요.",
+          title: "Extraction Failed",
+          description: "Unable to recognize text. Please try again.",
           variant: "destructive",
         });
       }
     } catch (error) {
       console.error("OCR processing error:", error);
       toast({
-        title: "처리 오류",
-        description: "이미지 처리 중 오류가 발생했습니다.",
+        title: "Processing Error",
+        description: "An error occurred while processing the image.",
         variant: "destructive",
       });
     } finally {
@@ -81,9 +81,9 @@ export default function CameraCapture({ onDataExtracted }: CameraCaptureProps) {
           <Camera className="text-primary" size={32} />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-slate-800 mb-2">고객정보 촬영</h2>
+          <h2 className="text-xl font-bold text-slate-800 mb-2">Capture Customer Info</h2>
           <p className="text-slate-600 text-sm">
-            고객이 작성한 정보지를 촬영하여<br />자동으로 데이터를 추출합니다
+            Take a photo of customer information form<br />to automatically extract data
           </p>
         </div>
 
@@ -104,7 +104,7 @@ export default function CameraCapture({ onDataExtracted }: CameraCaptureProps) {
               size="lg"
             >
               <Camera className="mr-3" size={20} />
-              사진 촬영하기
+              Take Photo
             </Button>
           </div>
         )}
@@ -124,7 +124,7 @@ export default function CameraCapture({ onDataExtracted }: CameraCaptureProps) {
                   className="flex-1 bg-secondary hover:bg-emerald-700 text-white font-medium"
                 >
                   <Cog className="mr-2" size={16} />
-                  텍스트 추출
+                  Extract Text
                 </Button>
                 <Button
                   onClick={handleRetake}
@@ -132,7 +132,7 @@ export default function CameraCapture({ onDataExtracted }: CameraCaptureProps) {
                   className="flex-1 bg-slate-500 hover:bg-slate-600 text-white font-medium"
                 >
                   <RotateCcw className="mr-2" size={16} />
-                  다시 촬영
+                  Retake Photo
                 </Button>
               </div>
             </div>
@@ -144,7 +144,7 @@ export default function CameraCapture({ onDataExtracted }: CameraCaptureProps) {
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <div className="flex items-center justify-center space-x-3">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-              <span className="text-primary font-medium">텍스트를 인식하는 중...</span>
+              <span className="text-primary font-medium">Recognizing text...</span>
             </div>
             <div className="mt-2 bg-blue-200 rounded-full h-2">
               <div

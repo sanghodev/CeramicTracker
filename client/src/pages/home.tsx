@@ -34,7 +34,7 @@ export default function Home() {
                 <Camera className="text-white" size={20} />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-slate-800">세라믹 고객관리</h1>
+                <h1 className="text-xl font-bold text-slate-800">Ceramics Studio</h1>
                 <p className="text-sm text-slate-500">Customer Management</p>
               </div>
             </div>
