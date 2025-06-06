@@ -14,6 +14,8 @@ import { z } from "zod";
 
 const formSchema = insertCustomerSchema.extend({
   workDate: z.string().min(1, "Please enter work date"),
+  isGroup: z.string().default("false"),
+  groupSize: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -30,6 +32,8 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
   const [phoneValue, setPhoneValue] = useState(initialData?.phone || "");
   const [emailValue, setEmailValue] = useState(initialData?.email || "");
   const [workImagePreview, setWorkImagePreview] = useState<string | null>(initialData?.workImage || null);
+  const [isGroupBooking, setIsGroupBooking] = useState(false);
+  const [groupSize, setGroupSize] = useState("2");
   const suggestedDates = getSuggestedDates();
 
   const form = useForm<FormData>({
