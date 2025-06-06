@@ -49,7 +49,7 @@ export async function processImageWithOCR(
   }
 }
 
-// Image preprocessing to improve OCR accuracy
+// Image preprocessing to improve OCR accuracy for form-like text
 async function preprocessImage(imageSrc: string): Promise<string> {
   return new Promise((resolve) => {
     const canvas = document.createElement('canvas');
@@ -57,25 +57,36 @@ async function preprocessImage(imageSrc: string): Promise<string> {
     const img = new Image();
     
     img.onload = () => {
-      // Set canvas size
-      canvas.width = img.width;
-      canvas.height = img.height;
+      // Scale up image for better recognition
+      const scale = Math.max(1, 800 / Math.max(img.width, img.height));
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
       
-      // Draw original image
-      ctx.drawImage(img, 0, 0);
+      // Draw scaled image
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       
       // Get image data
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const data = imageData.data;
       
-      // Convert to grayscale and increase contrast
+      // Convert to grayscale with moderate contrast adjustment
       for (let i = 0; i < data.length; i += 4) {
         const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
-        // Increase contrast
-        const contrast = avg > 128 ? 255 : 0;
-        data[i] = contrast;     // Red
-        data[i + 1] = contrast; // Green
-        data[i + 2] = contrast; // Blue
+        
+        // Moderate contrast enhancement (not as aggressive as before)
+        let enhanced;
+        if (avg < 50) {
+          enhanced = 0; // Very dark stays black
+        } else if (avg > 200) {
+          enhanced = 255; // Very light stays white
+        } else {
+          // Enhance contrast for middle values
+          enhanced = avg < 128 ? Math.max(0, avg - 30) : Math.min(255, avg + 30);
+        }
+        
+        data[i] = enhanced;     // Red
+        data[i + 1] = enhanced; // Green
+        data[i + 2] = enhanced; // Blue
       }
       
       // Put processed image data back
@@ -101,60 +112,114 @@ function parseExtractedText(text: string): ExtractedData {
     return data;
   }
   
-  const cleanText = text.replace(/[^\w\s@.-]/g, ' ').replace(/\s+/g, ' ');
-  console.log('Cleaned text:', cleanText);
+  // Clean and normalize the text
+  const cleanText = text.replace(/[^\w\s@.-/#:]/g, ' ').replace(/\s+/g, ' ').toLowerCase();
+  console.log('Cleaned text for parsing:', cleanText);
   
-  // Phone number detection (flexible patterns)
-  const phoneRegex = /(\d{3}[\s.-]?\d{3}[\s.-]?\d{4})/;
-  const phoneMatch = cleanText.match(phoneRegex);
-  if (phoneMatch) {
-    const digits = phoneMatch[1].replace(/\D/g, '');
-    data.phone = `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
-  }
+  // Split into lines and words for better parsing
+  const lines = text.split(/[\n\r]+/).map(line => line.trim()).filter(line => line.length > 0);
+  const allText = text.replace(/\s+/g, ' ');
   
-  // Email detection
-  const emailRegex = /(\S+@\S+\.\w+)/;
-  const emailMatch = cleanText.match(emailRegex);
-  if (emailMatch) {
-    data.email = emailMatch[1];
-  }
+  console.log('Lines:', lines);
   
-  // Name detection (words that are likely names)
-  const words = cleanText.split(/\s+/).filter(word => 
-    word.length > 1 && 
-    /^[A-Za-z]+$/.test(word) && 
-    !word.includes('@')
-  );
+  // Look for labeled information using various patterns
   
-  // Try to find name patterns
-  for (let i = 0; i < words.length - 1; i++) {
-    const potential = `${words[i]} ${words[i + 1]}`;
-    if (potential.length >= 4 && potential.length <= 40) {
-      data.name = potential;
+  // Name extraction - look for "name:" label
+  const namePatterns = [
+    /name\s*:?\s*([a-zA-Z\s]{2,40})/i,
+    /^name\s+([a-zA-Z\s]{2,40})/i
+  ];
+  
+  for (const pattern of namePatterns) {
+    const match = allText.match(pattern);
+    if (match && match[1]) {
+      data.name = match[1].trim();
       break;
     }
   }
   
-  // If no two-word name found, use first decent word
-  if (!data.name && words.length > 0) {
-    const firstWord = words.find(word => word.length >= 2 && word.length <= 20);
-    if (firstWord) {
-      data.name = firstWord;
+  // If no labeled name found, look for name after first few words
+  if (!data.name) {
+    for (const line of lines) {
+      const words = line.split(/\s+/);
+      // Skip lines with numbers, emails, or symbols
+      if (!/[\d@#]/.test(line) && words.length >= 2 && words.length <= 4) {
+        const potential = words.join(' ');
+        if (potential.length >= 4 && potential.length <= 40 && /^[a-zA-Z\s]+$/.test(potential)) {
+          data.name = potential;
+          break;
+        }
+      }
     }
   }
   
-  // Date detection
-  const dateRegex = /(\d{1,2}[\/-]\d{1,2}[\/-]\d{4})/;
-  const dateMatch = cleanText.match(dateRegex);
-  if (dateMatch) {
-    const dateParts = dateMatch[1].split(/[\/-]/);
-    if (dateParts.length === 3) {
-      // Assume MM/DD/YYYY format
-      const [month, day, year] = dateParts;
-      data.workDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  // Phone number extraction - look for phone/phone# label and numbers
+  const phonePatterns = [
+    /phone\s*#?\s*:?\s*([0-9\s.()\-]{10,15})/i,
+    /phone\s+([0-9\s.()\-]{10,15})/i,
+    /([0-9]{3}[\s.\-]?[0-9]{3}[\s.\-]?[0-9]{4})/,
+    /\(?([0-9]{3})\)?[\s.\-]*([0-9]{3})[\s.\-]*([0-9]{4})/
+  ];
+  
+  for (const pattern of phonePatterns) {
+    const match = allText.match(pattern);
+    if (match) {
+      let phoneDigits = '';
+      if (match[1]) {
+        phoneDigits = match[1].replace(/\D/g, '');
+      } else if (match[2] && match[3]) {
+        phoneDigits = match[1] + match[2] + match[3];
+      }
+      
+      if (phoneDigits.length === 10) {
+        data.phone = `(${phoneDigits.slice(0,3)}) ${phoneDigits.slice(3,6)}-${phoneDigits.slice(6)}`;
+        break;
+      }
     }
   }
   
-  console.log('Parsed data:', data);
+  // Email extraction - look for email label
+  const emailPatterns = [
+    /email\s*:?\s*([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i,
+    /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/
+  ];
+  
+  for (const pattern of emailPatterns) {
+    const match = allText.match(pattern);
+    if (match && match[1]) {
+      data.email = match[1];
+      break;
+    }
+  }
+  
+  // Date extraction - look for date label
+  const datePatterns = [
+    /date\s*:?\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4})/i,
+    /(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4})/,
+    /(\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2})/
+  ];
+  
+  for (const pattern of datePatterns) {
+    const match = allText.match(pattern);
+    if (match && match[1]) {
+      const dateStr = match[1];
+      const dateParts = dateStr.split(/[\/\-\.]/);
+      
+      if (dateParts.length === 3) {
+        let [part1, part2, part3] = dateParts;
+        
+        // Check if it's YYYY-MM-DD format
+        if (part1.length === 4) {
+          data.workDate = `${part1}-${part2.padStart(2, '0')}-${part3.padStart(2, '0')}`;
+        } else {
+          // Assume MM/DD/YYYY format
+          data.workDate = `${part3}-${part1.padStart(2, '0')}-${part2.padStart(2, '0')}`;
+        }
+        break;
+      }
+    }
+  }
+  
+  console.log('Final parsed data:', data);
   return data;
 }
