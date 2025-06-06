@@ -21,7 +21,7 @@ function Navigation() {
             className="flex items-center gap-2"
           >
             <Camera className="h-4 w-4" />
-            고객 등록
+            Register Customer
           </Button>
         </Link>
         <Link href="/customers">
@@ -30,7 +30,7 @@ function Navigation() {
             className="flex items-center gap-2"
           >
             <Users className="h-4 w-4" />
-            고객 관리
+            Customer Management
           </Button>
         </Link>
       </div>

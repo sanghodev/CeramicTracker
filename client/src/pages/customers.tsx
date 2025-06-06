@@ -281,8 +281,8 @@ export default function Customers() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-slate-600">
                             <div>📞 {customer.phone}</div>
                             <div>📧 {customer.email || "No email"}</div>
-                            <div>📅 {typeof customer.workDate === 'string' ? customer.workDate : new Date(customer.workDate).toLocaleDateString()}</div>
-                            <div>🕒 Registered: {typeof customer.createdAt === 'string' ? new Date(customer.createdAt).toLocaleDateString() : customer.createdAt.toLocaleDateString()}</div>
+                            <div>📅 {typeof customer.workDate === 'string' ? customer.workDate : new Date(customer.workDate).toLocaleDateString('en-US')}</div>
+                            <div>🕒 Registered: {typeof customer.createdAt === 'string' ? new Date(customer.createdAt).toLocaleDateString('en-US') : customer.createdAt.toLocaleDateString('en-US')}</div>
                           </div>
                         </div>
                         

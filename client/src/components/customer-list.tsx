@@ -115,7 +115,7 @@ export default function CustomerList() {
                       {customer.workImage ? (
                         <img
                           src={customer.workImage}
-                          alt={`${customer.name}의 작품`}
+                          alt={`${customer.name}'s work`}
                           className="w-16 h-16 object-cover rounded-lg border border-slate-200"
                         />
                       ) : (
@@ -149,7 +149,7 @@ export default function CustomerList() {
                         )}
                         <div className="flex items-center space-x-2">
                           <Calendar size={14} className="w-4" />
-                          <span>{new Date(customer.workDate).toLocaleDateString('ko-KR')}</span>
+                          <span>{new Date(customer.workDate).toLocaleDateString('en-US')}</span>
                         </div>
                       </div>
                     </div>
