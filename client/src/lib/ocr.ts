@@ -12,7 +12,7 @@ export async function processImageWithOCR(
   onProgress: (progress: number) => void
 ): Promise<ExtractedData | null> {
   try {
-    const worker = await createWorker('kor+eng', 1, {
+    const worker = await createWorker('eng', 1, {
       logger: (m) => {
         if (m.status === 'recognizing text') {
           onProgress(Math.round(m.progress * 100));
@@ -46,11 +46,11 @@ function parseExtractedText(text: string): ExtractedData {
   lines.forEach(line => {
     const cleanLine = line.trim();
     
-    // Phone number detection (Korean format)
-    const phoneRegex = /(\d{3}[-\s]?\d{3,4}[-\s]?\d{4})/;
+    // Phone number detection (US formats)
+    const phoneRegex = /(\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4})/;
     const phoneMatch = cleanLine.match(phoneRegex);
     if (phoneMatch && !data.phone) {
-      data.phone = phoneMatch[1].replace(/\s/g, '-');
+      data.phone = phoneMatch[1];
     }
     
     // Email detection
@@ -60,18 +60,24 @@ function parseExtractedText(text: string): ExtractedData {
       data.email = emailMatch[1];
     }
     
-    // Name detection (Korean characters, 2-4 characters)
-    const nameRegex = /^[가-힣]{2,4}$/;
-    if (nameRegex.test(cleanLine) && !data.name && cleanLine.length <= 10) {
+    // Name detection (English names, 2-30 characters, letters, spaces, apostrophes, hyphens)
+    const nameRegex = /^[A-Za-z\s\-']{2,30}$/;
+    if (nameRegex.test(cleanLine) && !data.name && !cleanLine.includes('@') && !phoneRegex.test(cleanLine)) {
       data.name = cleanLine;
     }
     
-    // Date detection (various formats)
-    const dateRegex = /(\d{4}[-./]\d{1,2}[-./]\d{1,2})/;
+    // Date detection (various formats: MM/DD/YYYY, MM-DD-YYYY, YYYY-MM-DD, etc.)
+    const dateRegex = /(\d{1,2}[-./]\d{1,2}[-./]\d{4}|\d{4}[-./]\d{1,2}[-./]\d{1,2})/;
     const dateMatch = cleanLine.match(dateRegex);
-    if (dateMatch && !data.workDate) {
+    if (dateMatch && data.workDate === new Date().toISOString().split('T')[0]) {
       const dateStr = dateMatch[1].replace(/[./]/g, '-');
-      data.workDate = dateStr;
+      // Convert MM/DD/YYYY to YYYY-MM-DD format if needed
+      const dateParts = dateStr.split('-');
+      if (dateParts[0].length === 2 && dateParts[2].length === 4) {
+        data.workDate = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
+      } else {
+        data.workDate = dateStr;
+      }
     }
   });
 

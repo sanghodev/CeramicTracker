@@ -23,11 +23,11 @@ const getStatusColor = (status: string) => {
 const getStatusText = (status: string) => {
   switch (status) {
     case "completed":
-      return "완료";
+      return "Completed";
     case "in_progress":
-      return "진행중";
+      return "In Progress";
     case "waiting":
-      return "대기중";
+      return "Waiting";
     default:
       return status;
   }
@@ -100,7 +100,7 @@ export default function CustomerList() {
             ))
           ) : filteredCustomers.length === 0 ? (
             <div className="text-center py-8 text-slate-500">
-              {searchQuery ? "검색 결과가 없습니다." : "등록된 고객이 없습니다."}
+              {searchQuery ? "No search results found." : "No customers registered yet."}
             </div>
           ) : (
             filteredCustomers.map((customer) => (
