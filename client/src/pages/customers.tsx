@@ -277,12 +277,20 @@ export default function Customers() {
                             <Badge variant={getStatusBadge(customer.status)}>
                               {getStatusText(customer.status)}
                             </Badge>
+                            {customer.isGroup === "true" && (
+                              <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                                Group ({customer.groupSize})
+                              </Badge>
+                            )}
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-slate-600">
                             <div>📞 {customer.phone}</div>
                             <div>📧 {customer.email || "No email"}</div>
                             <div>📅 {typeof customer.workDate === 'string' ? customer.workDate : new Date(customer.workDate).toLocaleDateString('en-US')}</div>
                             <div>🕒 Registered: {typeof customer.createdAt === 'string' ? new Date(customer.createdAt).toLocaleDateString('en-US') : customer.createdAt.toLocaleDateString('en-US')}</div>
+                            {customer.isGroup === "true" && customer.groupId && (
+                              <div>🏷️ Group ID: {customer.groupId}</div>
+                            )}
                           </div>
                         </div>
                         

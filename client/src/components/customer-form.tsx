@@ -45,6 +45,8 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
       workDate: initialData?.workDate || new Date().toISOString().split('T')[0],
       status: "waiting",
       workImage: initialData?.workImage || "",
+      isGroup: "false",
+      groupSize: "",
     },
   });
 
@@ -70,8 +72,35 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
     },
   });
 
+  const generateGroupId = (workDate: string, groupSize: string) => {
+    const date = new Date(workDate);
+    const year = date.getFullYear().toString().slice(-2);
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    
+    // Generate group letter (A, B, C, etc.)
+    const groupLetter = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+    
+    // Generate sequential number (01, 02, etc.)
+    const sequentialNumber = '01'; // This would be calculated based on existing groups for the day
+    
+    return `${year}${month}${day}-${groupSize}${groupLetter}${sequentialNumber}`;
+  };
+
   const onSubmit = (data: FormData) => {
-    createCustomerMutation.mutate(data);
+    const submissionData = { ...data };
+    
+    if (isGroupBooking) {
+      submissionData.isGroup = "true";
+      submissionData.groupSize = groupSize;
+      submissionData.groupId = generateGroupId(data.workDate, groupSize);
+    } else {
+      submissionData.isGroup = "false";
+      submissionData.groupSize = "";
+      submissionData.groupId = "";
+    }
+    
+    createCustomerMutation.mutate(submissionData);
   };
 
   const handlePhoneChange = (field: any, value: string) => {
@@ -197,6 +226,58 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
                 </FormItem>
               )}
             />
+
+            {/* Booking Type Selection */}
+            <div className="space-y-3">
+              <label className="text-sm font-semibold text-slate-700">Booking Type</label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={!isGroupBooking ? "default" : "outline"}
+                  onClick={() => {
+                    setIsGroupBooking(false);
+                    form.setValue("isGroup", "false");
+                  }}
+                  className="flex-1"
+                >
+                  Single Booking
+                </Button>
+                <Button
+                  type="button"
+                  variant={isGroupBooking ? "default" : "outline"}
+                  onClick={() => {
+                    setIsGroupBooking(true);
+                    form.setValue("isGroup", "true");
+                  }}
+                  className="flex-1"
+                >
+                  Group Booking
+                </Button>
+              </div>
+            </div>
+
+            {/* Group Size Selection */}
+            {isGroupBooking && (
+              <div className="space-y-3">
+                <label className="text-sm font-semibold text-slate-700">Group Size</label>
+                <div className="flex gap-2">
+                  {[2, 3, 4, 5, 6].map((size) => (
+                    <Button
+                      key={size}
+                      type="button"
+                      variant={groupSize === size.toString() ? "default" : "outline"}
+                      onClick={() => {
+                        setGroupSize(size.toString());
+                        form.setValue("groupSize", size.toString());
+                      }}
+                      className="flex-1"
+                    >
+                      {size} People
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <FormField
               control={form.control}

@@ -135,6 +135,11 @@ export default function CustomerList() {
                         >
                           {getStatusText(customer.status)}
                         </Badge>
+                        {customer.isGroup === "true" && (
+                          <Badge variant="secondary" className="bg-purple-100 text-purple-800 text-xs">
+                            Group ({customer.groupSize})
+                          </Badge>
+                        )}
                       </div>
                       <div className="space-y-1 text-sm text-slate-600">
                         <div className="flex items-center space-x-2">
@@ -151,6 +156,11 @@ export default function CustomerList() {
                           <Calendar size={14} className="w-4" />
                           <span>{new Date(customer.workDate).toLocaleDateString('en-US')}</span>
                         </div>
+                        {customer.isGroup === "true" && customer.groupId && (
+                          <div className="flex items-center space-x-2">
+                            <span className="text-xs">🏷️ ID: {customer.groupId}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
