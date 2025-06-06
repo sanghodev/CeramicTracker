@@ -48,13 +48,58 @@ export function getSuggestedDates(): { label: string; value: string }[] {
   return suggestions;
 }
 
-// Simple placeholder function - returns manual entry template
+// OCR Space API for accurate text recognition
 export async function processImageWithOCR(
   imageSrc: string,
   onProgress: (progress: number) => void
 ): Promise<ExtractedData | null> {
-  onProgress(100);
-  return createManualEntry();
+  try {
+    onProgress(10);
+    
+    // Convert base64 to blob for upload
+    const response = await fetch(imageSrc);
+    const blob = await response.blob();
+    
+    onProgress(30);
+    
+    // Create form data for OCR Space API
+    const formData = new FormData();
+    formData.append('file', blob, 'image.jpg');
+    formData.append('apikey', 'helloworld'); // Free API key
+    formData.append('language', 'eng');
+    formData.append('isOverlayRequired', 'false');
+    formData.append('detectOrientation', 'true');
+    formData.append('scale', 'true');
+    
+    onProgress(50);
+    
+    // Call OCR Space API
+    const ocrResponse = await fetch('https://api.ocr.space/parse/image', {
+      method: 'POST',
+      body: formData
+    });
+    
+    onProgress(80);
+    
+    const result = await ocrResponse.json();
+    
+    if (result.ParsedResults && result.ParsedResults.length > 0) {
+      const extractedText = result.ParsedResults[0].ParsedText;
+      console.log('OCR Space extracted text:', extractedText);
+      
+      const parsed = parseExtractedText(extractedText);
+      onProgress(100);
+      return parsed;
+    } else {
+      console.log('No text found by OCR Space API');
+      onProgress(100);
+      return createManualEntry();
+    }
+  } catch (error) {
+    console.error('OCR Space API failed:', error);
+    onProgress(100);
+    return createManualEntry();
+  }
 }
 
 // Image preprocessing to improve OCR accuracy for form-like text
@@ -120,110 +165,114 @@ function parseExtractedText(text: string): ExtractedData {
     return data;
   }
   
-  // Clean and normalize the text
-  const cleanText = text.replace(/[^\w\s@.-/#:]/g, ' ').replace(/\s+/g, ' ').toLowerCase();
-  console.log('Cleaned text for parsing:', cleanText);
+  console.log('Raw extracted text:', text);
   
-  // Split into lines and words for better parsing
+  // Split into lines for line-by-line analysis
   const lines = text.split(/[\n\r]+/).map(line => line.trim()).filter(line => line.length > 0);
-  const allText = text.replace(/\s+/g, ' ');
   
-  console.log('Lines:', lines);
+  // Also prepare a single string version for pattern matching
+  const singleLineText = text.replace(/[\n\r]+/g, ' ').replace(/\s+/g, ' ');
   
-  // Look for labeled information using various patterns
+  console.log('Processing lines:', lines);
   
-  // Name extraction - look for "name:" label
-  const namePatterns = [
-    /name\s*:?\s*([a-zA-Z\s]{2,40})/i,
-    /^name\s+([a-zA-Z\s]{2,40})/i
-  ];
-  
-  for (const pattern of namePatterns) {
-    const match = allText.match(pattern);
-    if (match && match[1]) {
-      data.name = match[1].trim();
-      break;
+  // Enhanced parsing for form labels like "Name:", "Phone#:", "Email:", "Date:"
+  for (const line of lines) {
+    const cleanLine = line.trim();
+    
+    // Name extraction - look for "Name:" followed by text
+    if (/^name\s*:?\s*/i.test(cleanLine)) {
+      const nameMatch = cleanLine.match(/^name\s*:?\s*(.+)/i);
+      if (nameMatch && nameMatch[1]) {
+        const potentialName = nameMatch[1].trim();
+        // Validate it looks like a name (letters and spaces, reasonable length)
+        if (/^[a-zA-Z\s]{2,50}$/.test(potentialName)) {
+          data.name = potentialName;
+          console.log('Found name:', data.name);
+        }
+      }
+    }
+    
+    // Phone extraction - look for "Phone" or "Phone#:" followed by numbers
+    if (/^phone\s*#?\s*:?\s*/i.test(cleanLine)) {
+      const phoneMatch = cleanLine.match(/^phone\s*#?\s*:?\s*(.+)/i);
+      if (phoneMatch && phoneMatch[1]) {
+        const phoneText = phoneMatch[1].trim();
+        const digits = phoneText.replace(/\D/g, '');
+        if (digits.length === 10) {
+          data.phone = `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
+          console.log('Found phone:', data.phone);
+        }
+      }
+    }
+    
+    // Email extraction - look for "Email:" followed by email address
+    if (/^email\s*:?\s*/i.test(cleanLine)) {
+      const emailMatch = cleanLine.match(/^email\s*:?\s*(.+)/i);
+      if (emailMatch && emailMatch[1]) {
+        const emailText = emailMatch[1].trim();
+        const emailPattern = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/;
+        const foundEmail = emailText.match(emailPattern);
+        if (foundEmail) {
+          data.email = foundEmail[1];
+          console.log('Found email:', data.email);
+        }
+      }
+    }
+    
+    // Date extraction - look for "Date:" followed by date
+    if (/^date\s*:?\s*/i.test(cleanLine)) {
+      const dateMatch = cleanLine.match(/^date\s*:?\s*(.+)/i);
+      if (dateMatch && dateMatch[1]) {
+        const dateText = dateMatch[1].trim();
+        const datePattern = /(\d{1,2}[\/-]\d{1,2}[\/-]\d{4})/;
+        const foundDate = dateText.match(datePattern);
+        if (foundDate) {
+          const dateParts = foundDate[1].split(/[\/-]/);
+          if (dateParts.length === 3) {
+            const [month, day, year] = dateParts;
+            data.workDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+            console.log('Found date:', data.workDate);
+          }
+        }
+      }
     }
   }
   
-  // If no labeled name found, look for name after first few words
+  // Fallback: if no labeled data found, try to extract from anywhere in text
+  if (!data.phone) {
+    const phonePattern = /(\d{3}[\s.-]?\d{3}[\s.-]?\d{4})/;
+    const phoneMatch = singleLineText.match(phonePattern);
+    if (phoneMatch) {
+      const digits = phoneMatch[1].replace(/\D/g, '');
+      if (digits.length === 10) {
+        data.phone = `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
+        console.log('Found phone (fallback):', data.phone);
+      }
+    }
+  }
+  
+  if (!data.email) {
+    const emailPattern = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/;
+    const emailMatch = singleLineText.match(emailPattern);
+    if (emailMatch) {
+      data.email = emailMatch[1];
+      console.log('Found email (fallback):', data.email);
+    }
+  }
+  
   if (!data.name) {
+    // Look for potential names (sequences of 2-4 words with only letters)
     for (const line of lines) {
-      const words = line.split(/\s+/);
-      // Skip lines with numbers, emails, or symbols
-      if (!/[\d@#]/.test(line) && words.length >= 2 && words.length <= 4) {
-        const potential = words.join(' ');
-        if (potential.length >= 4 && potential.length <= 40 && /^[a-zA-Z\s]+$/.test(potential)) {
-          data.name = potential;
-          break;
+      if (!/[\d@#:()]/.test(line)) { // Skip lines with numbers, symbols
+        const words = line.split(/\s+/).filter(word => /^[a-zA-Z]+$/.test(word));
+        if (words.length >= 2 && words.length <= 4) {
+          const potentialName = words.join(' ');
+          if (potentialName.length >= 4 && potentialName.length <= 50) {
+            data.name = potentialName;
+            console.log('Found name (fallback):', data.name);
+            break;
+          }
         }
-      }
-    }
-  }
-  
-  // Phone number extraction - look for phone/phone# label and numbers
-  const phonePatterns = [
-    /phone\s*#?\s*:?\s*([0-9\s.()\-]{10,15})/i,
-    /phone\s+([0-9\s.()\-]{10,15})/i,
-    /([0-9]{3}[\s.\-]?[0-9]{3}[\s.\-]?[0-9]{4})/,
-    /\(?([0-9]{3})\)?[\s.\-]*([0-9]{3})[\s.\-]*([0-9]{4})/
-  ];
-  
-  for (const pattern of phonePatterns) {
-    const match = allText.match(pattern);
-    if (match) {
-      let phoneDigits = '';
-      if (match[1]) {
-        phoneDigits = match[1].replace(/\D/g, '');
-      } else if (match[2] && match[3]) {
-        phoneDigits = match[1] + match[2] + match[3];
-      }
-      
-      if (phoneDigits.length === 10) {
-        data.phone = `(${phoneDigits.slice(0,3)}) ${phoneDigits.slice(3,6)}-${phoneDigits.slice(6)}`;
-        break;
-      }
-    }
-  }
-  
-  // Email extraction - look for email label
-  const emailPatterns = [
-    /email\s*:?\s*([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i,
-    /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/
-  ];
-  
-  for (const pattern of emailPatterns) {
-    const match = allText.match(pattern);
-    if (match && match[1]) {
-      data.email = match[1];
-      break;
-    }
-  }
-  
-  // Date extraction - look for date label
-  const datePatterns = [
-    /date\s*:?\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4})/i,
-    /(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4})/,
-    /(\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2})/
-  ];
-  
-  for (const pattern of datePatterns) {
-    const match = allText.match(pattern);
-    if (match && match[1]) {
-      const dateStr = match[1];
-      const dateParts = dateStr.split(/[\/\-\.]/);
-      
-      if (dateParts.length === 3) {
-        let [part1, part2, part3] = dateParts;
-        
-        // Check if it's YYYY-MM-DD format
-        if (part1.length === 4) {
-          data.workDate = `${part1}-${part2.padStart(2, '0')}-${part3.padStart(2, '0')}`;
-        } else {
-          // Assume MM/DD/YYYY format
-          data.workDate = `${part3}-${part1.padStart(2, '0')}-${part2.padStart(2, '0')}`;
-        }
-        break;
       }
     }
   }

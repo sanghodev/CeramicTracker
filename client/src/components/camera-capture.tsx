@@ -168,9 +168,9 @@ export default function CameraCapture({ onDataExtracted }: CameraCaptureProps) {
             <div className="flex items-center justify-center space-x-3">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
               <span className="text-primary font-medium">
-                {progress < 20 ? "Preprocessing image..." : 
-                 progress < 40 ? "Initializing OCR..." : 
-                 progress < 90 ? "Reading text..." : "Processing data..."}
+                {progress < 30 ? "이미지 업로드 중..." : 
+                 progress < 50 ? "텍스트 분석 준비..." : 
+                 progress < 80 ? "자동 텍스트 인식 중..." : "정보 추출 완료 중..."}
               </span>
             </div>
             <div className="mt-2 bg-blue-200 rounded-full h-2">
@@ -180,7 +180,7 @@ export default function CameraCapture({ onDataExtracted }: CameraCaptureProps) {
               ></div>
             </div>
             <div className="mt-2 text-center text-xs text-slate-600">
-              {progress}% complete
+              고급 AI 텍스트 인식으로 정확하게 추출합니다 ({progress}%)
             </div>
           </div>
         )}
