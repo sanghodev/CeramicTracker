@@ -123,7 +123,7 @@ export default function Customers() {
   const suggestedDates = getSuggestedDates();
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 sm:p-6">
+    <div className="min-h-screen bg-slate-50 p-6">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
         <div className="text-center">
@@ -216,7 +216,7 @@ export default function Customers() {
                             </div>
                             <div>
                               <label className="block text-sm font-medium text-slate-700 mb-1">Work Date</label>
-                              <div className="flex flex-wrap gap-1 mb-2">
+                              <div className="flex gap-1 mb-2">
                                 {suggestedDates.map((suggestion) => (
                                   <Button
                                     key={suggestion.value}
@@ -236,7 +236,6 @@ export default function Customers() {
                                 onChange={(e) => setEditForm(prev => ({ ...prev, workDate: e.target.value }))}
                               />
                             </div>
-                          </div>
                         </div>
                         
                         <div>
@@ -253,7 +252,7 @@ export default function Customers() {
                           </select>
                         </div>
 
-                        <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                        <div className="flex gap-2 pt-2">
                           <Button
                             onClick={saveEdit}
                             disabled={updateMutation.isPending}

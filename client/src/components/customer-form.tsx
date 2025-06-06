@@ -230,7 +230,7 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
             {/* Booking Type Selection */}
             <div className="space-y-3">
               <label className="text-sm font-semibold text-slate-700">Booking Type</label>
-              <div className="flex gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <Button
                   type="button"
                   variant={!isGroupBooking ? "default" : "outline"}
@@ -238,9 +238,9 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
                     setIsGroupBooking(false);
                     form.setValue("isGroup", "false");
                   }}
-                  className="flex-1"
+                  className="text-sm py-2"
                 >
-                  Single Booking
+                  Single
                 </Button>
                 <Button
                   type="button"
@@ -249,9 +249,9 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
                     setIsGroupBooking(true);
                     form.setValue("isGroup", "true");
                   }}
-                  className="flex-1"
+                  className="text-sm py-2"
                 >
-                  Group Booking
+                  Group
                 </Button>
               </div>
             </div>
@@ -260,21 +260,40 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
             {isGroupBooking && (
               <div className="space-y-3">
                 <label className="text-sm font-semibold text-slate-700">Group Size</label>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-3">
                   {[2, 3, 4, 5, 6].map((size) => (
                     <Button
                       key={size}
                       type="button"
+                      size="sm"
                       variant={groupSize === size.toString() ? "default" : "outline"}
                       onClick={() => {
                         setGroupSize(size.toString());
                         form.setValue("groupSize", size.toString());
                       }}
-                      className="flex-1"
+                      className="text-xs"
                     >
-                      {size} People
+                      {size}
                     </Button>
                   ))}
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs text-slate-600">For groups larger than 6 people:</label>
+                  <Input
+                    type="number"
+                    min="7"
+                    max="50"
+                    placeholder="Enter group size (7+)"
+                    value={parseInt(groupSize) > 6 ? groupSize : ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value && parseInt(value) >= 7) {
+                        setGroupSize(value);
+                        form.setValue("groupSize", value);
+                      }
+                    }}
+                    className="w-full"
+                  />
                 </div>
               </div>
             )}
