@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Users, Search, Phone, Mail, Calendar, MoreVertical } from "lucide-react";
+import { Users, Search, Phone, Mail, Calendar, MoreVertical, Image } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -109,30 +109,48 @@ export default function CustomerList() {
                 className="border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow"
               >
                 <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <h4 className="font-semibold text-slate-800">{customer.name}</h4>
-                      <Badge
-                        variant="secondary"
-                        className={`text-xs font-medium px-2 py-1 rounded ${getStatusColor(customer.status)}`}
-                      >
-                        {getStatusText(customer.status)}
-                      </Badge>
-                    </div>
-                    <div className="space-y-1 text-sm text-slate-600">
-                      <div className="flex items-center space-x-2">
-                        <Phone size={14} className="w-4" />
-                        <span>{customer.phone}</span>
-                      </div>
-                      {customer.email && (
-                        <div className="flex items-center space-x-2">
-                          <Mail size={14} className="w-4" />
-                          <span>{customer.email}</span>
+                  <div className="flex items-start space-x-4 flex-1">
+                    {/* Customer work image */}
+                    <div className="flex-shrink-0">
+                      {customer.workImage ? (
+                        <img
+                          src={customer.workImage}
+                          alt={`${customer.name}의 작품`}
+                          className="w-16 h-16 object-cover rounded-lg border border-slate-200"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 bg-slate-100 rounded-lg border border-slate-200 flex items-center justify-center">
+                          <Image size={20} className="text-slate-400" />
                         </div>
                       )}
-                      <div className="flex items-center space-x-2">
-                        <Calendar size={14} className="w-4" />
-                        <span>{new Date(customer.workDate).toLocaleDateString('ko-KR')}</span>
+                    </div>
+                    
+                    {/* Customer info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <h4 className="font-semibold text-slate-800">{customer.name}</h4>
+                        <Badge
+                          variant="secondary"
+                          className={`text-xs font-medium px-2 py-1 rounded ${getStatusColor(customer.status)}`}
+                        >
+                          {getStatusText(customer.status)}
+                        </Badge>
+                      </div>
+                      <div className="space-y-1 text-sm text-slate-600">
+                        <div className="flex items-center space-x-2">
+                          <Phone size={14} className="w-4" />
+                          <span>{customer.phone}</span>
+                        </div>
+                        {customer.email && (
+                          <div className="flex items-center space-x-2">
+                            <Mail size={14} className="w-4" />
+                            <span className="truncate">{customer.email}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center space-x-2">
+                          <Calendar size={14} className="w-4" />
+                          <span>{new Date(customer.workDate).toLocaleDateString('ko-KR')}</span>
+                        </div>
                       </div>
                     </div>
                   </div>

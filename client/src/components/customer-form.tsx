@@ -40,6 +40,7 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
       email: initialData?.email || "",
       workDate: initialData?.workDate || new Date().toISOString().split('T')[0],
       status: "waiting",
+      workImage: initialData?.workImage || "",
     },
   });
 
@@ -78,6 +79,33 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
   const handleEmailChange = (field: any, value: string) => {
     setEmailValue(value);
     field.onChange(value);
+  };
+
+  const handleWorkImageUpload = (field: any, event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast({
+          title: "파일 크기 초과",
+          description: "파일 크기는 5MB 이하여야 합니다.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const base64 = e.target?.result as string;
+        setWorkImagePreview(base64);
+        field.onChange(base64);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeWorkImage = (field: any) => {
+    setWorkImagePreview(null);
+    field.onChange("");
   };
 
   const selectSuggestedDate = (dateValue: string) => {
@@ -198,6 +226,61 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
                       {...field}
                       className="px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                     />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="workImage"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-semibold text-slate-700">작품 사진 (선택사항)</FormLabel>
+                  <FormControl>
+                    <div className="space-y-4">
+                      {/* Image upload button */}
+                      <div className="flex items-center gap-4">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleWorkImageUpload(field, e)}
+                          className="hidden"
+                          id="work-image-upload"
+                        />
+                        <label
+                          htmlFor="work-image-upload"
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg cursor-pointer transition-colors"
+                        >
+                          <Upload className="h-4 w-4" />
+                          사진 업로드
+                        </label>
+                        {workImagePreview && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removeWorkImage(field)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <X className="h-4 w-4 mr-1" />
+                            제거
+                          </Button>
+                        )}
+                      </div>
+                      
+                      {/* Image preview */}
+                      {workImagePreview && (
+                        <div className="relative">
+                          <img
+                            src={workImagePreview}
+                            alt="작품 미리보기"
+                            className="w-full max-w-sm h-48 object-cover rounded-lg border border-slate-200"
+                          />
+                        </div>
+                      )}
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
