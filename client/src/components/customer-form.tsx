@@ -171,6 +171,26 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-sm font-semibold text-slate-700">Work Date</FormLabel>
+                  
+                  {/* Quick date suggestions */}
+                  <div className="flex gap-2 mb-2">
+                    {suggestedDates.map((suggestion) => (
+                      <Button
+                        key={suggestion.value}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => selectSuggestedDate(suggestion.value)}
+                        className="text-xs flex items-center gap-1"
+                      >
+                        {suggestion.label === 'Today' && <Clock className="h-3 w-3" />}
+                        {suggestion.label === 'Tomorrow' && <Calendar className="h-3 w-3" />}
+                        {suggestion.label === 'Next Week' && <Calendar className="h-3 w-3" />}
+                        {suggestion.label}
+                      </Button>
+                    ))}
+                  </div>
+                  
                   <FormControl>
                     <Input
                       type="date"
