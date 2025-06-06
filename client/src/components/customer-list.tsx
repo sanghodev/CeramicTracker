@@ -55,8 +55,8 @@ export default function CustomerList() {
               <Users className="text-secondary" size={20} />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-slate-800">고객 목록</h3>
-              <p className="text-sm text-slate-600">등록된 고객들을 관리하세요</p>
+              <h3 className="text-lg font-bold text-slate-800">Customer List</h3>
+              <p className="text-sm text-slate-600">Manage registered customers</p>
             </div>
           </div>
           <Badge variant="secondary" className="bg-primary/10 text-primary">
@@ -69,7 +69,7 @@ export default function CustomerList() {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
           <Input
             type="text"
-            placeholder="이름 또는 전화번호로 검색..."
+            placeholder="Search by name or phone number..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all"

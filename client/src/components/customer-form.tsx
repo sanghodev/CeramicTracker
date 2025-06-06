@@ -45,15 +45,15 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
       toast({
-        title: "저장 완료",
-        description: "고객 정보가 성공적으로 저장되었습니다.",
+        title: "Save Complete",
+        description: "Customer information successfully saved.",
       });
       onSubmitted();
     },
     onError: () => {
       toast({
-        title: "저장 실패",
-        description: "고객 정보 저장 중 오류가 발생했습니다.",
+        title: "Save Failed",
+        description: "An error occurred while saving customer information.",
         variant: "destructive",
       });
     },
@@ -81,10 +81,10 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-semibold text-slate-700">이름</FormLabel>
+                  <FormLabel className="text-sm font-semibold text-slate-700">Name</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="고객 이름을 입력하세요"
+                      placeholder="Enter customer name"
                       {...field}
                       className="px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                     />
@@ -99,11 +99,11 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
               name="phone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-semibold text-slate-700">전화번호</FormLabel>
+                  <FormLabel className="text-sm font-semibold text-slate-700">Phone Number</FormLabel>
                   <FormControl>
                     <Input
                       type="tel"
-                      placeholder="010-1234-5678"
+                      placeholder="(555) 123-4567"
                       {...field}
                       className="px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                     />
@@ -118,12 +118,13 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-semibold text-slate-700">이메일</FormLabel>
+                  <FormLabel className="text-sm font-semibold text-slate-700">Email</FormLabel>
                   <FormControl>
                     <Input
                       type="email"
                       placeholder="example@email.com"
                       {...field}
+                      value={field.value || ""}
                       className="px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                     />
                   </FormControl>
@@ -137,7 +138,7 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
               name="workDate"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-semibold text-slate-700">작업 날짜</FormLabel>
+                  <FormLabel className="text-sm font-semibold text-slate-700">Work Date</FormLabel>
                   <FormControl>
                     <Input
                       type="date"
@@ -157,7 +158,7 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
                 className="flex-1 bg-primary hover:bg-blue-700 text-white font-semibold py-3"
               >
                 <Save className="mr-2" size={16} />
-                {createCustomerMutation.isPending ? "저장 중..." : "저장하기"}
+                {createCustomerMutation.isPending ? "Saving..." : "Save"}
               </Button>
               <Button
                 type="button"
@@ -166,7 +167,7 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
                 className="flex-1 bg-slate-500 hover:bg-slate-600 text-white font-semibold py-3"
               >
                 <X className="mr-2" size={16} />
-                취소
+                Cancel
               </Button>
             </div>
           </form>
