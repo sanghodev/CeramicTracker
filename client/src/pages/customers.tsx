@@ -50,14 +50,14 @@ export default function Customers() {
       queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
       setEditingCustomer(null);
       toast({
-        title: "고객 정보 수정 완료",
-        description: "고객 정보가 성공적으로 업데이트되었습니다.",
+        title: "Customer Information Updated",
+        description: "Customer information has been successfully updated.",
       });
     },
     onError: () => {
       toast({
-        title: "수정 실패",
-        description: "고객 정보 수정 중 오류가 발생했습니다.",
+        title: "Update Failed",
+        description: "An error occurred while updating customer information.",
         variant: "destructive",
       });
     }
@@ -112,10 +112,10 @@ export default function Customers() {
 
   const getStatusText = (status: string) => {
     const statusMap: Record<string, string> = {
-      "waiting": "대기중",
-      "In Progress": "작업중",
-      "ready": "완료",
-      "completed": "수령완료"
+      "waiting": "Waiting",
+      "In Progress": "In Progress",
+      "ready": "Ready",
+      "completed": "Completed"
     };
     return statusMap[status] || status;
   };
@@ -130,8 +130,8 @@ export default function Customers() {
           <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
             <Users className="text-primary" size={32} />
           </div>
-          <h1 className="text-3xl font-bold text-slate-800 mb-2">고객 관리</h1>
-          <p className="text-slate-600">고객 정보를 검색하고 수정할 수 있습니다</p>
+          <h1 className="text-3xl font-bold text-slate-800 mb-2">Customer Management</h1>
+          <p className="text-slate-600">Search and edit customer information</p>
         </div>
 
         {/* Search */}
@@ -139,14 +139,14 @@ export default function Customers() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Search className="h-5 w-5" />
-              고객 검색
+              Customer Search
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
               <Input
-                placeholder="이름, 전화번호, 이메일로 검색..."
+                placeholder="Search by name, phone, or email..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -159,19 +159,19 @@ export default function Customers() {
         <Card>
           <CardHeader>
             <CardTitle>
-              {searchQuery ? `검색 결과 (${displayedCustomers.length}개)` : `전체 고객 (${customers.length}개)`}
+              {searchQuery ? `Search Results (${displayedCustomers.length})` : `All Customers (${customers.length})`}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading || isSearching ? (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                <p className="mt-2 text-slate-600">로딩 중...</p>
+                <p className="mt-2 text-slate-600">Loading...</p>
               </div>
             ) : displayedCustomers.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-slate-600">
-                  {searchQuery ? "검색 결과가 없습니다." : "등록된 고객이 없습니다."}
+                  {searchQuery ? "No search results found." : "No customers registered yet."}
                 </p>
               </div>
             ) : (
@@ -186,15 +186,15 @@ export default function Customers() {
                       <div className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">이름</label>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
                             <Input
                               value={editForm.name}
                               onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
-                              placeholder="고객 이름"
+                              placeholder="Customer name"
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">전화번호</label>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Phone Number</label>
                             <Input
                               value={editForm.phone}
                               onChange={(e) => handlePhoneChange(e.target.value)}
@@ -203,7 +203,7 @@ export default function Customers() {
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">이메일</label>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
                             <Input
                               type="email"
                               value={editForm.email}
@@ -212,7 +212,7 @@ export default function Customers() {
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">작업 날짜</label>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Work Date</label>
                             <div className="flex gap-1 mb-2">
                               {suggestedDates.map((suggestion) => (
                                 <Button
