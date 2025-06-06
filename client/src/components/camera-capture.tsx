@@ -167,13 +167,20 @@ export default function CameraCapture({ onDataExtracted }: CameraCaptureProps) {
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <div className="flex items-center justify-center space-x-3">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-              <span className="text-primary font-medium">Recognizing text...</span>
+              <span className="text-primary font-medium">
+                {progress < 20 ? "Preprocessing image..." : 
+                 progress < 40 ? "Initializing OCR..." : 
+                 progress < 90 ? "Reading text..." : "Processing data..."}
+              </span>
             </div>
             <div className="mt-2 bg-blue-200 rounded-full h-2">
               <div
                 className="bg-primary h-2 rounded-full transition-all duration-300"
                 style={{ width: `${progress}%` }}
               ></div>
+            </div>
+            <div className="mt-2 text-center text-xs text-slate-600">
+              {progress}% complete
             </div>
           </div>
         )}

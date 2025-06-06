@@ -1,13 +1,12 @@
 import { createWorker } from 'tesseract.js';
 
-interface ExtractedData {
+export interface ExtractedData {
   name: string;
   phone: string;
   email: string;
   workDate: string;
 }
 
-// Simple fallback function for manual entry when OCR fails
 export function createManualEntry(): ExtractedData {
   return {
     name: '',
@@ -17,135 +16,145 @@ export function createManualEntry(): ExtractedData {
   };
 }
 
+// Optimized OCR with better preprocessing
 export async function processImageWithOCR(
   imageSrc: string,
   onProgress: (progress: number) => void
 ): Promise<ExtractedData | null> {
   try {
-    onProgress(10);
+    onProgress(5);
     
-    const worker = await createWorker('eng', 1, {
-      logger: (m) => {
-        if (m.status === 'recognizing text') {
-          onProgress(Math.round(20 + m.progress * 60));
-        }
-      },
-    });
-
-    onProgress(25);
-
-    // Skip parameter setting to avoid type issues and improve speed
-
-    onProgress(30);
-
-    const { data: { text } } = await worker.recognize(imageSrc);
+    // Preprocess image for better OCR
+    const processedImageSrc = await preprocessImage(imageSrc);
+    onProgress(20);
     
+    const worker = await createWorker('eng');
+    onProgress(40);
+    
+    const { data: { text } } = await worker.recognize(processedImageSrc);
     await worker.terminate();
-    onProgress(100);
-
-    console.log('Extracted text:', text);
-
-    if (!text || text.trim().length === 0) {
-      console.log('No text found, returning manual entry template');
-      return createManualEntry();
-    }
-
+    onProgress(90);
+    
+    console.log('Raw OCR text:', text);
+    
     const parsed = parseExtractedText(text);
+    onProgress(100);
     
-    // If no useful data was extracted, return manual entry template
-    if (!parsed.name && !parsed.phone && !parsed.email) {
-      console.log('No useful data extracted, returning manual entry template');
-      return createManualEntry();
-    }
-    
-    return parsed;
+    // Always return something, even if empty
+    return parsed || createManualEntry();
   } catch (error) {
-    console.error('OCR processing failed:', error);
+    console.error('OCR failed:', error);
+    onProgress(100);
     return createManualEntry();
   }
 }
 
+// Image preprocessing to improve OCR accuracy
+async function preprocessImage(imageSrc: string): Promise<string> {
+  return new Promise((resolve) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d')!;
+    const img = new Image();
+    
+    img.onload = () => {
+      // Set canvas size
+      canvas.width = img.width;
+      canvas.height = img.height;
+      
+      // Draw original image
+      ctx.drawImage(img, 0, 0);
+      
+      // Get image data
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+      
+      // Convert to grayscale and increase contrast
+      for (let i = 0; i < data.length; i += 4) {
+        const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+        // Increase contrast
+        const contrast = avg > 128 ? 255 : 0;
+        data[i] = contrast;     // Red
+        data[i + 1] = contrast; // Green
+        data[i + 2] = contrast; // Blue
+      }
+      
+      // Put processed image data back
+      ctx.putImageData(imageData, 0, 0);
+      
+      // Return processed image as base64
+      resolve(canvas.toDataURL());
+    };
+    
+    img.src = imageSrc;
+  });
+}
+
 function parseExtractedText(text: string): ExtractedData {
-  const lines = text.split(/[\n\r]+/).filter(line => line.trim());
-  const allText = text.replace(/\s+/g, ' ').trim();
-  
   const data: ExtractedData = {
     name: '',
     phone: '',
     email: '',
     workDate: new Date().toISOString().split('T')[0]
   };
-
-  // Enhanced phone number detection (multiple US formats)
-  const phonePatterns = [
-    /\(?([0-9]{3})\)?[-.\s]?([0-9]{3})[-.\s]?([0-9]{4})/,
-    /([0-9]{3})[-.\s]([0-9]{3})[-.\s]([0-9]{4})/,
-    /\+?1?[-.\s]?\(?([0-9]{3})\)?[-.\s]?([0-9]{3})[-.\s]?([0-9]{4})/
-  ];
   
-  for (const pattern of phonePatterns) {
-    const match = allText.match(pattern);
-    if (match && !data.phone) {
-      data.phone = `(${match[1]}) ${match[2]}-${match[3]}`;
-      break;
-    }
+  if (!text || text.trim().length === 0) {
+    return data;
   }
-
-  // Enhanced email detection
-  const emailRegex = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/;
-  const emailMatch = allText.match(emailRegex);
+  
+  const cleanText = text.replace(/[^\w\s@.-]/g, ' ').replace(/\s+/g, ' ');
+  console.log('Cleaned text:', cleanText);
+  
+  // Phone number detection (flexible patterns)
+  const phoneRegex = /(\d{3}[\s.-]?\d{3}[\s.-]?\d{4})/;
+  const phoneMatch = cleanText.match(phoneRegex);
+  if (phoneMatch) {
+    const digits = phoneMatch[1].replace(/\D/g, '');
+    data.phone = `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
+  }
+  
+  // Email detection
+  const emailRegex = /(\S+@\S+\.\w+)/;
+  const emailMatch = cleanText.match(emailRegex);
   if (emailMatch) {
     data.email = emailMatch[1];
   }
-
-  // Enhanced name detection
-  lines.forEach(line => {
-    const cleanLine = line.trim();
-    
-    // Skip lines that contain numbers, @ symbols, or are too short/long
-    if (/[0-9@]/.test(cleanLine) || cleanLine.length < 2 || cleanLine.length > 40) {
-      return;
-    }
-    
-    // Look for patterns that suggest a name
-    const namePatterns = [
-      /^[A-Z][a-z]+\s+[A-Z][a-z]+$/, // First Last
-      /^[A-Z][a-z]+\s+[A-Z]\.\s+[A-Z][a-z]+$/, // First M. Last
-      /^[A-Z][a-z]+\s+[A-Z][a-z]+\s+[A-Z][a-z]+$/, // First Middle Last
-    ];
-    
-    for (const pattern of namePatterns) {
-      if (pattern.test(cleanLine) && !data.name) {
-        data.name = cleanLine;
-        break;
-      }
-    }
-  });
-
-  // Date detection with multiple formats
-  const datePatterns = [
-    /(\d{1,2})\/(\d{1,2})\/(\d{4})/, // MM/DD/YYYY
-    /(\d{1,2})-(\d{1,2})-(\d{4})/, // MM-DD-YYYY
-    /(\d{4})-(\d{1,2})-(\d{1,2})/, // YYYY-MM-DD
-    /(\d{1,2})\.(\d{1,2})\.(\d{4})/, // MM.DD.YYYY
-  ];
-
-  for (const pattern of datePatterns) {
-    const match = allText.match(pattern);
-    if (match) {
-      const [, part1, part2, part3] = match;
-      
-      // Check if it's already in YYYY-MM-DD format
-      if (part1.length === 4) {
-        data.workDate = `${part1}-${part2.padStart(2, '0')}-${part3.padStart(2, '0')}`;
-      } else {
-        // Assume MM/DD/YYYY format and convert
-        data.workDate = `${part3}-${part1.padStart(2, '0')}-${part2.padStart(2, '0')}`;
-      }
+  
+  // Name detection (words that are likely names)
+  const words = cleanText.split(/\s+/).filter(word => 
+    word.length > 1 && 
+    /^[A-Za-z]+$/.test(word) && 
+    !word.includes('@')
+  );
+  
+  // Try to find name patterns
+  for (let i = 0; i < words.length - 1; i++) {
+    const potential = `${words[i]} ${words[i + 1]}`;
+    if (potential.length >= 4 && potential.length <= 40) {
+      data.name = potential;
       break;
     }
   }
-
+  
+  // If no two-word name found, use first decent word
+  if (!data.name && words.length > 0) {
+    const firstWord = words.find(word => word.length >= 2 && word.length <= 20);
+    if (firstWord) {
+      data.name = firstWord;
+    }
+  }
+  
+  // Date detection
+  const dateRegex = /(\d{1,2}[\/-]\d{1,2}[\/-]\d{4})/;
+  const dateMatch = cleanText.match(dateRegex);
+  if (dateMatch) {
+    const dateParts = dateMatch[1].split(/[\/-]/);
+    if (dateParts.length === 3) {
+      // Assume MM/DD/YYYY format
+      const [month, day, year] = dateParts;
+      data.workDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+  }
+  
   console.log('Parsed data:', data);
   return data;
 }
