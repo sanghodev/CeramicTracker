@@ -1,6 +1,4 @@
-import { customers, users, type Customer, type InsertCustomer, type User, type InsertUser } from "@shared/schema";
-import { db } from "./db";
-import { eq, or, ilike, desc } from "drizzle-orm";
+import { type Customer, type InsertCustomer, type User, type InsertUser } from "@shared/schema";
 
 export interface IStorage {
   // User methods
@@ -16,66 +14,73 @@ export interface IStorage {
   updateCustomerStatus(id: number, status: string): Promise<Customer | undefined>;
 }
 
-export class DatabaseStorage implements IStorage {
+export class MemStorage implements IStorage {
+  private customers: Customer[] = [];
+  private users: User[] = [];
+  private nextCustomerId = 1;
+  private nextUserId = 1;
   // User methods
   async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user || undefined;
+    return this.users.find(user => user.id === id);
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user || undefined;
+    return this.users.find(user => user.username === username);
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(insertUser)
-      .returning();
+    const user: User = {
+      id: this.nextUserId++,
+      ...insertUser,
+    };
+    this.users.push(user);
     return user;
   }
 
   // Customer methods
   async getCustomer(id: number): Promise<Customer | undefined> {
-    const [customer] = await db.select().from(customers).where(eq(customers.id, id));
-    return customer || undefined;
+    return this.customers.find(customer => customer.id === id);
   }
 
   async getCustomers(): Promise<Customer[]> {
-    return await db.select().from(customers).orderBy(desc(customers.createdAt));
+    return [...this.customers].sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
   }
 
   async searchCustomers(query: string): Promise<Customer[]> {
-    return await db
-      .select()
-      .from(customers)
-      .where(
-        or(
-          ilike(customers.name, `%${query}%`),
-          ilike(customers.phone, `%${query}%`),
-          ilike(customers.email, `%${query}%`)
-        )
-      )
-      .orderBy(desc(customers.createdAt));
+    const lowerQuery = query.toLowerCase();
+    return this.customers.filter(customer =>
+      customer.name.toLowerCase().includes(lowerQuery) ||
+      customer.phone.toLowerCase().includes(lowerQuery) ||
+      (customer.email && customer.email.toLowerCase().includes(lowerQuery))
+    ).sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
   }
 
   async createCustomer(insertCustomer: InsertCustomer): Promise<Customer> {
-    const [customer] = await db
-      .insert(customers)
-      .values(insertCustomer)
-      .returning();
+    const customer: Customer = {
+      id: this.nextCustomerId++,
+      name: insertCustomer.name,
+      phone: insertCustomer.phone,
+      email: insertCustomer.email ?? null,
+      workDate: insertCustomer.workDate,
+      status: insertCustomer.status || "waiting",
+      createdAt: new Date(),
+    };
+    this.customers.push(customer);
     return customer;
   }
 
   async updateCustomerStatus(id: number, status: string): Promise<Customer | undefined> {
-    const [customer] = await db
-      .update(customers)
-      .set({ status })
-      .where(eq(customers.id, id))
-      .returning();
-    return customer || undefined;
+    const customer = this.customers.find(c => c.id === id);
+    if (customer) {
+      customer.status = status;
+      return customer;
+    }
+    return undefined;
   }
 }
 
-export const storage = new DatabaseStorage();
+export const storage = new MemStorage();

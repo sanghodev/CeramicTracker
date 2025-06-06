@@ -20,8 +20,19 @@ export async function processImageWithOCR(
       },
     });
 
-    const { data: { text } } = await worker.recognize(imageSrc);
+    // Optimize OCR settings for better performance and accuracy
+    await worker.setParameters({
+      tessedit_pageseg_mode: 6, // Uniform block of text
+      tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@.-() ',
+    });
+
+    const { data: { text } } = await worker.recognize(imageSrc, {
+      rectangle: undefined, // Process full image
+    });
+    
     await worker.terminate();
+
+    console.log('Extracted text:', text); // Debug log
 
     if (!text || text.trim().length === 0) {
       return null;
