@@ -306,7 +306,7 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
                   <FormLabel className="text-sm font-semibold text-slate-700">Work Date</FormLabel>
                   
                   {/* Quick date suggestions */}
-                  <div className="flex gap-2 mb-2">
+                  <div className="grid grid-cols-3 gap-1 mb-2">
                     {suggestedDates.map((suggestion) => (
                       <Button
                         key={suggestion.value}
@@ -319,7 +319,7 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
                         {suggestion.label === 'Today' && <Clock className="h-3 w-3" />}
                         {suggestion.label === 'Tomorrow' && <Calendar className="h-3 w-3" />}
                         {suggestion.label === 'Next Week' && <Calendar className="h-3 w-3" />}
-                        {suggestion.label}
+                        <span className="truncate">{suggestion.label}</span>
                       </Button>
                     ))}
                   </div>
@@ -391,7 +391,7 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
               )}
             />
 
-            <div className="flex space-x-3 pt-4">
+            <div className="flex flex-col sm:flex-row gap-3 pt-4">
               <Button
                 type="submit"
                 disabled={createCustomerMutation.isPending}

@@ -13,26 +13,30 @@ function Navigation() {
   const [location] = useLocation();
   
   return (
-    <nav className="bg-white border-b border-slate-200 px-6 py-4">
-      <div className="max-w-6xl mx-auto flex justify-center space-x-4">
-        <Link href="/">
-          <Button 
-            variant={location === "/" ? "default" : "outline"}
-            className="flex items-center gap-2"
-          >
-            <Camera className="h-4 w-4" />
-            Register Customer
-          </Button>
-        </Link>
-        <Link href="/customers">
-          <Button 
-            variant={location === "/customers" ? "default" : "outline"}
-            className="flex items-center gap-2"
-          >
-            <Users className="h-4 w-4" />
-            Customer Management
-          </Button>
-        </Link>
+    <nav className="bg-white border-b border-slate-200 px-4 sm:px-6 py-4">
+      <div className="max-w-6xl mx-auto flex justify-center">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:space-x-4 w-full sm:w-auto">
+          <Link href="/">
+            <Button 
+              variant={location === "/" ? "default" : "outline"}
+              className="flex items-center gap-1 sm:gap-2 text-sm sm:text-base w-full sm:w-auto"
+            >
+              <Camera className="h-4 w-4" />
+              <span className="hidden sm:inline">Register Customer</span>
+              <span className="sm:hidden">Register</span>
+            </Button>
+          </Link>
+          <Link href="/customers">
+            <Button 
+              variant={location === "/customers" ? "default" : "outline"}
+              className="flex items-center gap-1 sm:gap-2 text-sm sm:text-base w-full sm:w-auto"
+            >
+              <Users className="h-4 w-4" />
+              <span className="hidden sm:inline">Customer Management</span>
+              <span className="sm:hidden">Manage</span>
+            </Button>
+          </Link>
+        </div>
       </div>
     </nav>
   );
