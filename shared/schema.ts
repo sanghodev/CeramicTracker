@@ -9,6 +9,7 @@ export const customers = pgTable("customers", {
   email: varchar("email", { length: 255 }),
   workDate: timestamp("work_date").notNull(),
   status: varchar("status", { length: 20 }).notNull().default("waiting"),
+  workImage: text("work_image"), // Base64 encoded image
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -17,6 +18,7 @@ export const insertCustomerSchema = createInsertSchema(customers).omit({
   createdAt: true,
 }).extend({
   workDate: z.string().transform((str) => new Date(str)),
+  workImage: z.string().optional(),
 });
 
 export type InsertCustomer = z.infer<typeof insertCustomerSchema>;

@@ -68,6 +68,7 @@ export class MemStorage implements IStorage {
       email: insertCustomer.email ?? null,
       workDate: insertCustomer.workDate,
       status: insertCustomer.status || "waiting",
+      workImage: insertCustomer.workImage ?? null,
       createdAt: new Date(),
     };
     this.customers.push(customer);

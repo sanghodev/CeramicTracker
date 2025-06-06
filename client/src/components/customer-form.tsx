@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Check, Save, X, CheckCircle, Calendar, Clock } from "lucide-react";
+import { Check, Save, X, CheckCircle, Calendar, Clock, Camera, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,7 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
   const { toast } = useToast();
   const [phoneValue, setPhoneValue] = useState(initialData?.phone || "");
   const [emailValue, setEmailValue] = useState(initialData?.email || "");
+  const [workImagePreview, setWorkImagePreview] = useState<string | null>(initialData?.workImage || null);
   const suggestedDates = getSuggestedDates();
 
   const form = useForm<FormData>({
