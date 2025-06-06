@@ -270,8 +270,8 @@ export default function Customers() {
                       </div>
                     ) : (
                       // View Mode
-                      <div className="flex justify-between items-start">
-                        <div className="space-y-2">
+                      <div className="flex justify-between items-start gap-4">
+                        <div className="flex-1 space-y-2">
                           <div className="flex items-center gap-3">
                             <h3 className="text-lg font-semibold text-slate-800">{customer.name}</h3>
                             <Badge variant={getStatusBadge(customer.status)}>
@@ -285,10 +285,23 @@ export default function Customers() {
                             <div>🕒 등록: {typeof customer.createdAt === 'string' ? new Date(customer.createdAt).toLocaleDateString() : customer.createdAt.toLocaleDateString()}</div>
                           </div>
                         </div>
+                        
+                        {/* Customer Image */}
+                        {customer.workImage && (
+                          <div className="flex-shrink-0">
+                            <img
+                              src={customer.workImage}
+                              alt={`${customer.name}의 작업 이미지`}
+                              className="w-24 h-24 object-cover rounded-lg border border-slate-200"
+                            />
+                          </div>
+                        )}
+                        
                         <Button
                           onClick={() => startEdit(customer)}
                           variant="outline"
                           size="sm"
+                          className="flex-shrink-0"
                         >
                           <Edit2 className="h-4 w-4 mr-2" />
                           수정
