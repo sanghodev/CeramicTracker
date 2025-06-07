@@ -103,7 +103,11 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
       submissionData.groupId = "";
     }
     
-    console.log("Submitting customer data:", submissionData);
+    console.log("Submitting customer data:", {
+      ...submissionData,
+      customerImage: submissionData.customerImage ? "IMAGE_DATA_PRESENT" : "NO_IMAGE",
+      workImage: submissionData.workImage ? "IMAGE_DATA_PRESENT" : "NO_IMAGE"
+    });
     createCustomerMutation.mutate(submissionData);
   };
 
@@ -152,6 +156,12 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
   // Handle data from camera capture
   useEffect(() => {
     if (initialData) {
+      console.log("Customer form - receiving initial data:", {
+        ...initialData,
+        customerImage: initialData.customerImage ? "IMAGE_DATA_PRESENT" : "NO_IMAGE",
+        workImage: initialData.workImage ? "IMAGE_DATA_PRESENT" : "NO_IMAGE"
+      });
+      
       form.setValue("name", initialData.name || "");
       form.setValue("phone", initialData.phone || "");
       form.setValue("email", initialData.email || "");
@@ -166,6 +176,7 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
       }
       
       if (initialData.customerImage) {
+        console.log("Setting customer image preview");
         setCustomerImagePreview(initialData.customerImage);
         form.setValue("customerImage", initialData.customerImage);
       }
@@ -182,6 +193,18 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
           <h3 className="text-lg font-bold text-slate-800">Extracted Customer Information</h3>
           <p className="text-sm text-slate-600">Review and edit the information before saving</p>
         </div>
+
+        {/* Customer Image Preview */}
+        {customerImagePreview && (
+          <div className="bg-slate-50 rounded-lg p-4">
+            <h4 className="text-sm font-semibold text-slate-700 mb-2">Scanned Information Image</h4>
+            <img
+              src={customerImagePreview}
+              alt="Customer information"
+              className="w-full max-w-sm h-auto object-contain rounded-lg border border-slate-200 mx-auto"
+            />
+          </div>
+        )}
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

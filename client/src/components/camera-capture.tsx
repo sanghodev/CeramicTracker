@@ -43,10 +43,15 @@ export default function CameraCapture({ onDataExtracted }: CameraCaptureProps) {
 
       if (extractedData) {
         // Include the captured image as customer info image
-        onDataExtracted({
+        const dataWithImage = {
           ...extractedData,
           customerImage: capturedImage
+        };
+        console.log("Camera capture - sending data with image:", {
+          ...dataWithImage,
+          customerImage: dataWithImage.customerImage ? "IMAGE_DATA_PRESENT" : "NO_IMAGE"
         });
+        onDataExtracted(dataWithImage);
         toast({
           title: "Text Extraction Complete",
           description: "Customer information extracted. Please review and edit as needed.",

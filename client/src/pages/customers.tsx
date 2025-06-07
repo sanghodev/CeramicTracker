@@ -304,18 +304,28 @@ export default function Customers() {
                             {/* Customer Images */}
                             <div className="flex gap-2 flex-shrink-0">
                               {customer.customerImage && (
-                                <ImageZoom
-                                  src={customer.customerImage}
-                                  alt={`${customer.name}'s information image`}
-                                  thumbnailClassName="w-16 h-16 sm:w-20 sm:h-20"
-                                />
+                                <div className="relative">
+                                  <ImageZoom
+                                    src={customer.customerImage}
+                                    alt={`${customer.name}'s information image`}
+                                    thumbnailClassName="w-16 h-16 sm:w-20 sm:h-20"
+                                  />
+                                  <div className="absolute -bottom-1 -right-1 bg-blue-500 text-white text-xs px-1 rounded">
+                                    Info
+                                  </div>
+                                </div>
                               )}
                               {customer.workImage && (
-                                <ImageZoom
-                                  src={customer.workImage}
-                                  alt={`${customer.name}'s work image`}
-                                  thumbnailClassName="w-16 h-16 sm:w-20 sm:h-20"
-                                />
+                                <div className="relative">
+                                  <ImageZoom
+                                    src={customer.workImage}
+                                    alt={`${customer.name}'s work image`}
+                                    thumbnailClassName="w-16 h-16 sm:w-20 sm:h-20"
+                                  />
+                                  <div className="absolute -bottom-1 -right-1 bg-green-500 text-white text-xs px-1 rounded">
+                                    Work
+                                  </div>
+                                </div>
                               )}
                             </div>
                             
