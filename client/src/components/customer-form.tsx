@@ -103,6 +103,7 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
       submissionData.groupId = "";
     }
     
+    console.log("Submitting customer data:", submissionData);
     createCustomerMutation.mutate(submissionData);
   };
 
