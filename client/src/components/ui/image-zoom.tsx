@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { ZoomIn, X } from "lucide-react";
 
 interface ImageZoomProps {
@@ -69,8 +70,8 @@ export function ImageZoom({ src, alt, className = "", thumbnailClassName = "w-20
         </div>
       </div>
 
-      {/* Modal overlay - using portal-like approach */}
-      {isOpen && (
+      {/* Modal overlay - using React Portal */}
+      {isOpen && createPortal(
         <div 
           className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[9999] p-2 sm:p-4"
           onClick={handleModalClick}
@@ -102,7 +103,8 @@ export function ImageZoom({ src, alt, className = "", thumbnailClassName = "w-20
               />
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
