@@ -15,6 +15,8 @@ export function ImageZoom({ src, alt, className = "", thumbnailClassName = "w-20
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [lastTouchDistance, setLastTouchDistance] = useState(0);
+  const [touchStartPosition, setTouchStartPosition] = useState({ x: 0, y: 0 });
 
   if (!src) return null;
 
@@ -101,6 +103,85 @@ export function ImageZoom({ src, alt, className = "", thumbnailClassName = "w-20
     setScale(prev => Math.min(Math.max(prev * delta, 0.5), 5));
   };
 
+  // Touch event handlers for mobile
+  const getTouchDistance = (touches: React.TouchList) => {
+    if (touches.length < 2) return 0;
+    const touch1 = touches[0];
+    const touch2 = touches[1];
+    return Math.sqrt(
+      Math.pow(touch2.clientX - touch1.clientX, 2) + 
+      Math.pow(touch2.clientY - touch1.clientY, 2)
+    );
+  };
+
+  const getTouchCenter = (touches: React.TouchList) => {
+    if (touches.length === 1) {
+      return { x: touches[0].clientX, y: touches[0].clientY };
+    }
+    const touch1 = touches[0];
+    const touch2 = touches[1];
+    return {
+      x: (touch1.clientX + touch2.clientX) / 2,
+      y: (touch1.clientY + touch2.clientY) / 2
+    };
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    e.preventDefault();
+    const touches = e.touches;
+    
+    if (touches.length === 1) {
+      // Single touch - start dragging
+      if (scale > 1) {
+        setIsDragging(true);
+        setTouchStartPosition({
+          x: touches[0].clientX - position.x,
+          y: touches[0].clientY - position.y
+        });
+      }
+    } else if (touches.length === 2) {
+      // Two fingers - start pinch zoom
+      setIsDragging(false);
+      const touch1 = touches[0];
+      const touch2 = touches[1];
+      const distance = Math.sqrt(
+        Math.pow(touch2.clientX - touch1.clientX, 2) + 
+        Math.pow(touch2.clientY - touch1.clientY, 2)
+      );
+      setLastTouchDistance(distance);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    e.preventDefault();
+    const touches = e.touches;
+
+    if (touches.length === 1 && isDragging && scale > 1) {
+      // Single touch drag
+      setPosition({
+        x: touches[0].clientX - touchStartPosition.x,
+        y: touches[0].clientY - touchStartPosition.y
+      });
+    } else if (touches.length === 2 && lastTouchDistance > 0) {
+      // Pinch zoom
+      const touch1 = touches[0];
+      const touch2 = touches[1];
+      const currentDistance = Math.sqrt(
+        Math.pow(touch2.clientX - touch1.clientX, 2) + 
+        Math.pow(touch2.clientY - touch1.clientY, 2)
+      );
+      const scaleChange = currentDistance / lastTouchDistance;
+      setScale(prev => Math.min(Math.max(prev * scaleChange, 0.5), 5));
+      setLastTouchDistance(currentDistance);
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    setLastTouchDistance(0);
+  };
+
   return (
     <>
       {/* Thumbnail with hover effect */}
@@ -175,15 +256,19 @@ export function ImageZoom({ src, alt, className = "", thumbnailClassName = "w-20
             </div>
             
             <div 
-              className="relative bg-slate-50 max-h-[85vh] overflow-hidden cursor-grab active:cursor-grabbing"
+              className="relative bg-slate-50 max-h-[85vh] overflow-hidden cursor-grab active:cursor-grabbing touch-none"
               style={{ 
-                cursor: scale > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default'
+                cursor: scale > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default',
+                touchAction: 'none'
               }}
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
               onWheel={handleWheel}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
             >
               <img
                 src={src}
@@ -203,7 +288,8 @@ export function ImageZoom({ src, alt, className = "", thumbnailClassName = "w-20
             
             {/* Instructions */}
             <div className="p-2 text-xs text-slate-500 text-center bg-slate-50 border-t">
-              마우스 휠로 확대/축소 • 확대된 이미지를 드래그해서 이동 가능
+              <div className="hidden sm:block">마우스 휠로 확대/축소 • 확대된 이미지를 드래그해서 이동 가능</div>
+              <div className="block sm:hidden">두 손가락으로 확대/축소 • 한 손가락으로 드래그해서 이동 가능</div>
             </div>
           </div>
         </div>,
