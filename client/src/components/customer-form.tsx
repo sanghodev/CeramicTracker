@@ -32,6 +32,7 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
   const [phoneValue, setPhoneValue] = useState(initialData?.phone || "");
   const [emailValue, setEmailValue] = useState(initialData?.email || "");
   const [workImagePreview, setWorkImagePreview] = useState<string | null>(initialData?.workImage || null);
+  const [customerImagePreview, setCustomerImagePreview] = useState<string | null>(initialData?.customerImage || null);
   const [isGroupBooking, setIsGroupBooking] = useState(false);
   const [groupSize, setGroupSize] = useState("2");
   const suggestedDates = getSuggestedDates();
@@ -45,6 +46,7 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
       workDate: initialData?.workDate || new Date().toISOString().split('T')[0],
       status: "waiting",
       workImage: initialData?.workImage || "",
+      customerImage: initialData?.customerImage || "",
       isGroup: "false",
       groupSize: "",
     },

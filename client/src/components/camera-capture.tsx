@@ -42,10 +42,10 @@ export default function CameraCapture({ onDataExtracted }: CameraCaptureProps) {
       });
 
       if (extractedData) {
-        // Include the captured image with the extracted data
+        // Include the captured image as customer info image
         onDataExtracted({
           ...extractedData,
-          workImage: capturedImage
+          customerImage: capturedImage
         });
         toast({
           title: "Text Extraction Complete",
