@@ -304,27 +304,32 @@ export default function Customers() {
                             {/* Customer Images */}
                             <div className="flex gap-2 flex-shrink-0">
                               {customer.customerImage && (
-                                <div className="relative">
+                                <div className="relative group">
                                   <ImageZoom
                                     src={customer.customerImage}
-                                    alt={`${customer.name}'s information image`}
-                                    thumbnailClassName="w-16 h-16 sm:w-20 sm:h-20"
+                                    alt={`${customer.name}의 정보 이미지`}
+                                    thumbnailClassName="w-16 h-16 sm:w-20 sm:h-20 border-2 border-blue-200 hover:border-blue-400 transition-colors"
                                   />
-                                  <div className="absolute -bottom-1 -right-1 bg-blue-500 text-white text-xs px-1 rounded">
-                                    Info
+                                  <div className="absolute -bottom-1 -right-1 bg-blue-500 text-white text-xs px-1.5 py-0.5 rounded-full text-[10px] font-medium shadow-sm">
+                                    정보
                                   </div>
                                 </div>
                               )}
                               {customer.workImage && (
-                                <div className="relative">
+                                <div className="relative group">
                                   <ImageZoom
                                     src={customer.workImage}
-                                    alt={`${customer.name}'s work image`}
-                                    thumbnailClassName="w-16 h-16 sm:w-20 sm:h-20"
+                                    alt={`${customer.name}의 작업 이미지`}
+                                    thumbnailClassName="w-16 h-16 sm:w-20 sm:h-20 border-2 border-green-200 hover:border-green-400 transition-colors"
                                   />
-                                  <div className="absolute -bottom-1 -right-1 bg-green-500 text-white text-xs px-1 rounded">
-                                    Work
+                                  <div className="absolute -bottom-1 -right-1 bg-green-500 text-white text-xs px-1.5 py-0.5 rounded-full text-[10px] font-medium shadow-sm">
+                                    작업
                                   </div>
+                                </div>
+                              )}
+                              {!customer.customerImage && !customer.workImage && (
+                                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-100 border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center">
+                                  <span className="text-slate-400 text-xs">이미지 없음</span>
                                 </div>
                               )}
                             </div>
@@ -336,7 +341,7 @@ export default function Customers() {
                               className="flex-shrink-0"
                             >
                               <Edit2 className="h-4 w-4 mr-1 sm:mr-2" />
-                              <span className="hidden sm:inline">Edit</span>
+                              <span className="hidden sm:inline">편집</span>
                             </Button>
                           </div>
                         </div>

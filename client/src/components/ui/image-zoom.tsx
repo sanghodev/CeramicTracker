@@ -31,24 +31,24 @@ export function ImageZoom({ src, alt, className = "", thumbnailClassName = "w-20
       {/* Modal overlay */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-2 sm:p-4"
           onClick={() => setIsOpen(false)}
         >
-          <div className="relative max-w-4xl max-h-[90vh] bg-white rounded-lg overflow-hidden">
-            <div className="flex justify-between items-center p-4 border-b">
-              <h3 className="text-lg font-semibold">{alt}</h3>
+          <div className="relative w-full max-w-5xl max-h-[95vh] bg-white rounded-lg overflow-hidden shadow-2xl">
+            <div className="flex justify-between items-center p-3 sm:p-4 border-b bg-slate-50">
+              <h3 className="text-base sm:text-lg font-semibold text-slate-800 truncate pr-2">{alt}</h3>
               <button
                 onClick={() => setIsOpen(false)}
-                className="p-2 hover:bg-gray-100 rounded-full"
+                className="p-2 hover:bg-slate-200 rounded-full transition-colors flex-shrink-0"
               >
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4 sm:h-5 sm:w-5" />
               </button>
             </div>
-            <div className="p-4">
+            <div className="p-2 sm:p-4 bg-slate-50">
               <img
                 src={src}
                 alt={alt}
-                className="w-full h-auto max-h-[70vh] object-contain"
+                className="w-full h-auto max-h-[80vh] object-contain rounded border shadow-sm"
                 onClick={(e) => e.stopPropagation()}
               />
             </div>

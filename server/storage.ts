@@ -69,6 +69,7 @@ export class MemStorage implements IStorage {
       workDate: insertCustomer.workDate,
       status: insertCustomer.status || "waiting",
       workImage: insertCustomer.workImage ?? null,
+      customerImage: insertCustomer.customerImage ?? null,
       isGroup: insertCustomer.isGroup || "false",
       groupId: insertCustomer.groupId ?? null,
       groupSize: insertCustomer.groupSize ?? null,
