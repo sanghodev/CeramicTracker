@@ -10,7 +10,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatPhoneNumber, isValidEmail, getSuggestedDates } from "@/lib/ocr";
 import type { Customer } from "@shared/schema";
-import TestImageZoom from "@/components/test-image-zoom";
+
+import { ProfileSummaryButton, QuickSummaryBadge } from "@/components/profile-summary";
 
 export default function Customers() {
   const { toast } = useToast();
@@ -136,10 +137,7 @@ export default function Customers() {
           <p className="text-slate-600">Search and edit customer information</p>
         </div>
 
-        {/* Test Image Zoom - Development Only */}
-        {process.env.NODE_ENV === 'development' && (
-          <TestImageZoom />
-        )}
+
 
         {/* Search */}
         <Card>
@@ -284,7 +282,7 @@ export default function Customers() {
                       <div className="space-y-4">
                         <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                           <div className="flex-1 space-y-2">
-                            <div className="flex flex-wrap items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2 mb-2">
                               <h3 className="text-lg font-semibold text-slate-800">{customer.name}</h3>
                               <Badge variant={getStatusBadge(customer.status)}>
                                 {getStatusText(customer.status)}
@@ -294,6 +292,9 @@ export default function Customers() {
                                   Group ({customer.groupSize})
                                 </Badge>
                               )}
+                            </div>
+                            <div className="mb-2">
+                              <QuickSummaryBadge customer={customer} />
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-slate-600">
                               <div>📞 {customer.phone}</div>
@@ -347,15 +348,18 @@ export default function Customers() {
                               )}
                             </div>
                             
-                            <Button
-                              onClick={() => startEdit(customer)}
-                              variant="outline"
-                              size="sm"
-                              className="flex-shrink-0"
-                            >
-                              <Edit2 className="h-4 w-4 mr-1 sm:mr-2" />
-                              <span className="hidden sm:inline">편집</span>
-                            </Button>
+                            <div className="flex gap-2">
+                              <ProfileSummaryButton customer={customer} />
+                              <Button
+                                onClick={() => startEdit(customer)}
+                                variant="outline"
+                                size="sm"
+                                className="flex-shrink-0"
+                              >
+                                <Edit2 className="h-4 w-4 mr-1 sm:mr-2" />
+                                <span className="hidden sm:inline">편집</span>
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       </div>
