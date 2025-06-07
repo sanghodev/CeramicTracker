@@ -9,6 +9,7 @@ export const customers = pgTable("customers", {
   email: varchar("email", { length: 255 }),
   workDate: timestamp("work_date").notNull(),
   status: varchar("status", { length: 20 }).notNull().default("waiting"),
+  programType: varchar("program_type", { length: 50 }).notNull().default("painting"), // "painting", "one_time_ceramic", "advanced_ceramic"
   workImage: text("work_image"), // Base64 encoded image
   customerImage: text("customer_image"), // Base64 encoded customer info image
   isGroup: text("is_group").default("false").notNull(), // "true" or "false"

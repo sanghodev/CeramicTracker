@@ -17,13 +17,15 @@ export default function Customers() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchDate, setSearchDate] = useState("");
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [editForm, setEditForm] = useState({
     name: "",
     phone: "",
     email: "",
     workDate: "",
-    status: ""
+    status: "",
+    programType: ""
   });
 
   const { data: customers = [], isLoading } = useQuery({

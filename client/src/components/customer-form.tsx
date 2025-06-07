@@ -17,6 +17,7 @@ const formSchema = insertCustomerSchema.extend({
   isGroup: z.string().default("false"),
   groupSize: z.string().optional(),
   customerImage: z.string().optional(),
+  programType: z.string().default("painting"),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -46,6 +47,7 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
       email: initialData?.email || "",
       workDate: initialData?.workDate || new Date().toISOString().split('T')[0],
       status: "waiting",
+      programType: initialData?.programType || "painting",
       workImage: initialData?.workImage || "",
       customerImage: initialData?.customerImage || "",
       isGroup: "false",
@@ -271,6 +273,28 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
                         <CheckCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-green-500" />
                       )}
                     </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Program Type Selection */}
+            <FormField
+              control={form.control}
+              name="programType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-semibold text-slate-700">Program Type</FormLabel>
+                  <FormControl>
+                    <select
+                      {...field}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all bg-white"
+                    >
+                      <option value="painting">Painting (Default)</option>
+                      <option value="one_time_ceramic">One-Time Ceramic</option>
+                      <option value="advanced_ceramic">Advanced Ceramic</option>
+                    </select>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
