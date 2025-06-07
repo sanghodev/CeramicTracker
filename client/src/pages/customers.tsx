@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ImageZoom } from "@/components/ui/image-zoom";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatPhoneNumber, isValidEmail, getSuggestedDates } from "@/lib/ocr";
@@ -300,16 +301,23 @@ export default function Customers() {
                           </div>
                           
                           <div className="flex items-center gap-4">
-                            {/* Customer Image */}
-                            {customer.workImage && (
-                              <div className="flex-shrink-0">
-                                <img
+                            {/* Customer Images */}
+                            <div className="flex gap-2 flex-shrink-0">
+                              {customer.customerImage && (
+                                <ImageZoom
+                                  src={customer.customerImage}
+                                  alt={`${customer.name}'s information image`}
+                                  thumbnailClassName="w-16 h-16 sm:w-20 sm:h-20"
+                                />
+                              )}
+                              {customer.workImage && (
+                                <ImageZoom
                                   src={customer.workImage}
                                   alt={`${customer.name}'s work image`}
-                                  className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-lg border border-slate-200"
+                                  thumbnailClassName="w-16 h-16 sm:w-20 sm:h-20"
                                 />
-                              </div>
-                            )}
+                              )}
+                            </div>
                             
                             <Button
                               onClick={() => startEdit(customer)}
