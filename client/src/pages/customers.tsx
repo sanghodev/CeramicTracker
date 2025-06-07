@@ -297,18 +297,32 @@ export default function Customers() {
                           </div>
                         </div>
                         
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
-                          <select
-                            value={editForm.status}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, status: e.target.value }))}
-                            className="w-full p-2 border border-slate-300 rounded-md"
-                          >
-                            <option value="waiting">Waiting</option>
-                            <option value="In Progress">In Progress</option>
-                            <option value="ready">Ready</option>
-                            <option value="completed">Completed</option>
-                          </select>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                            <select
+                              value={editForm.status}
+                              onChange={(e) => setEditForm(prev => ({ ...prev, status: e.target.value }))}
+                              className="w-full p-2 border border-slate-300 rounded-md"
+                            >
+                              <option value="waiting">Waiting</option>
+                              <option value="In Progress">In Progress</option>
+                              <option value="ready">Ready</option>
+                              <option value="completed">Completed</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Program Type</label>
+                            <select
+                              value={editForm.programType}
+                              onChange={(e) => setEditForm(prev => ({ ...prev, programType: e.target.value }))}
+                              className="w-full p-2 border border-slate-300 rounded-md"
+                            >
+                              <option value="painting">Painting</option>
+                              <option value="one_time_ceramic">One-Time Ceramic</option>
+                              <option value="advanced_ceramic">Advanced Ceramic</option>
+                            </select>
+                          </div>
                         </div>
 
                         <div className="flex flex-col sm:flex-row gap-2 pt-2">

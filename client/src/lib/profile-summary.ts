@@ -8,6 +8,33 @@ export interface ProfileSummary {
   recommendations: string[];
 }
 
+function formatDate(date: Date): string {
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+}
+
+function getStatusEnglish(status: string): string {
+  const statusMap: Record<string, string> = {
+    "waiting": "Waiting",
+    "In Progress": "In Progress", 
+    "ready": "Ready",
+    "completed": "Completed"
+  };
+  return statusMap[status] || status;
+}
+
+function getProgramTypeText(programType: string): string {
+  const programMap: Record<string, string> = {
+    "painting": "Painting",
+    "one_time_ceramic": "One-Time Ceramic",
+    "advanced_ceramic": "Advanced Ceramic"
+  };
+  return programMap[programType] || programType;
+}
+
 export function generateCustomerSummary(customer: Customer): ProfileSummary {
   // Calculate work history
   const registrationDate = new Date(customer.createdAt);
@@ -16,29 +43,31 @@ export function generateCustomerSummary(customer: Customer): ProfileSummary {
   const daysUntilWork = Math.floor((workDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
   
   // Basic info summary
-  const basicInfo = `${customer.name}님은 ${formatDate(registrationDate)}에 등록된 ${customer.isGroup === "true" ? `${customer.groupSize}명의 그룹` : "개인"} 고객입니다. 연락처는 ${customer.phone}${customer.email ? `, 이메일은 ${customer.email}` : ""}입니다.`;
+  const programType = getProgramTypeText(customer.programType || "painting");
+  const basicInfo = `${customer.name} is a ${customer.isGroup === "true" ? `group of ${customer.groupSize} people` : "individual"} customer registered on ${formatDate(registrationDate)}. Contact: ${customer.phone}${customer.email ? `, Email: ${customer.email}` : ""}. Program: ${programType}.`;
 
   // Work history
-  let workHistory = `작업 예정일: ${formatDate(workDate)}`;
+  let workHistory = `Scheduled work date: ${formatDate(workDate)}`;
   if (daysUntilWork > 0) {
-    workHistory += ` (${daysUntilWork}일 후)`;
+    workHistory += ` (in ${daysUntilWork} days)`;
   } else if (daysUntilWork === 0) {
-    workHistory += " (오늘)";
+    workHistory += " (today)";
   } else {
-    workHistory += ` (${Math.abs(daysUntilWork)}일 전)`;
+    workHistory += ` (${Math.abs(daysUntilWork)} days ago)`;
   }
   
-  workHistory += `. 현재 상태: ${getStatusKorean(customer.status)}`;
+  workHistory += `. Current status: ${getStatusEnglish(customer.status)}`;
 
   // Group preferences if applicable
   let preferences = "";
   if (customer.isGroup === "true") {
-    preferences = `그룹 작업을 선호하며, ${customer.groupSize}명이 함께 참여합니다. `;
+    preferences = `Group booking with ${customer.groupSize} participants. `;
     if (customer.groupId) {
-      preferences += `그룹 ID: ${customer.groupId}`;
+      preferences += `Group ID: ${customer.groupId}. `;
     }
+    preferences += `Enrolled in ${programType} program.`;
   } else {
-    preferences = "개인 작업을 선호합니다.";
+    preferences = `Individual booking for ${programType} program.`;
   }
 
   // Notes based on data
@@ -56,50 +85,32 @@ export function generateCustomerSummary(customer: Customer): ProfileSummary {
   };
 }
 
-function formatDate(date: Date): string {
-  return date.toLocaleDateString('ko-KR', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-}
-
-function getStatusKorean(status: string): string {
-  const statusMap: Record<string, string> = {
-    "waiting": "대기 중",
-    "In Progress": "진행 중",
-    "ready": "준비 완료",
-    "completed": "완료됨"
-  };
-  return statusMap[status] || status;
-}
-
 function generateNotes(customer: Customer, daysSinceRegistration: number, daysUntilWork: number): string {
   const notes: string[] = [];
 
   if (daysSinceRegistration === 0) {
-    notes.push("오늘 새로 등록된 고객입니다.");
+    notes.push("New customer registered today.");
   } else if (daysSinceRegistration <= 7) {
-    notes.push(`${daysSinceRegistration}일 전에 등록된 신규 고객입니다.`);
+    notes.push(`New customer registered ${daysSinceRegistration} days ago.`);
   }
 
   if (daysUntilWork < 0) {
-    notes.push("작업 예정일이 지났습니다. 상태 확인이 필요할 수 있습니다.");
+    notes.push("Scheduled work date has passed. Status update may be needed.");
   } else if (daysUntilWork === 0) {
-    notes.push("오늘이 작업 예정일입니다.");
+    notes.push("Scheduled work is today.");
   } else if (daysUntilWork <= 3) {
-    notes.push("작업 예정일이 임박했습니다.");
+    notes.push("Work date is approaching soon.");
   }
 
   if (customer.isGroup === "true") {
     const groupSize = parseInt(customer.groupSize || "0");
     if (groupSize >= 5) {
-      notes.push("대규모 그룹으로 충분한 준비가 필요합니다.");
+      notes.push("Large group booking requires adequate preparation.");
     }
   }
 
   if (!customer.email) {
-    notes.push("이메일 정보가 없습니다. 추가 연락처 확보를 고려해보세요.");
+    notes.push("No email address on file. Consider collecting for better communication.");
   }
 
   return notes.join(" ");
@@ -109,27 +120,35 @@ function generateRecommendations(customer: Customer, daysUntilWork: number): str
   const recommendations: string[] = [];
 
   if (daysUntilWork <= 1 && customer.status === "waiting") {
-    recommendations.push("작업 상태를 '진행 중'으로 업데이트 고려");
+    recommendations.push("Consider updating status to 'In Progress'");
   }
 
   if (customer.isGroup === "true") {
-    recommendations.push("그룹 작업을 위한 충분한 공간과 재료 준비");
+    recommendations.push("Prepare adequate workspace and materials for group session");
     if (parseInt(customer.groupSize || "0") >= 4) {
-      recommendations.push("대규모 그룹을 위한 추가 지원 직원 배치 고려");
+      recommendations.push("Consider additional staff support for large group");
     }
   }
 
   if (!customer.email) {
-    recommendations.push("이메일 주소 수집으로 소통 채널 다양화");
+    recommendations.push("Collect email address for improved communication");
   }
 
   if (daysUntilWork > 7) {
-    recommendations.push("작업 전 리마인더 연락 예약");
+    recommendations.push("Schedule reminder contact before work date");
   }
 
   if (customer.status === "completed") {
-    recommendations.push("완료 작품 사진 촬영 및 후기 요청");
-    recommendations.push("재방문 유도를 위한 할인 쿠폰 제공 고려");
+    recommendations.push("Take photos of completed work");
+    recommendations.push("Request customer feedback and reviews");
+    recommendations.push("Offer return visit discount or loyalty program");
+  }
+
+  const programType = customer.programType || "painting";
+  if (programType === "advanced_ceramic") {
+    recommendations.push("Ensure kiln schedule and advanced tools are available");
+  } else if (programType === "one_time_ceramic") {
+    recommendations.push("Prepare beginner-friendly ceramic tools and guidance");
   }
 
   return recommendations;
@@ -137,18 +156,19 @@ function generateRecommendations(customer: Customer, daysUntilWork: number): str
 
 export function generateQuickSummary(customer: Customer): string {
   const isGroup = customer.isGroup === "true";
-  const groupInfo = isGroup ? `${customer.groupSize}명 그룹` : "개인";
+  const groupInfo = isGroup ? `${customer.groupSize} people` : "Individual";
   const workDate = new Date(customer.workDate);
   const daysUntilWork = Math.floor((workDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  const programType = getProgramTypeText(customer.programType || "painting");
   
   let timeInfo = "";
   if (daysUntilWork > 0) {
-    timeInfo = `${daysUntilWork}일 후 작업 예정`;
+    timeInfo = `${daysUntilWork} days until work`;
   } else if (daysUntilWork === 0) {
-    timeInfo = "오늘 작업 예정";
+    timeInfo = "Work scheduled today";
   } else {
-    timeInfo = `${Math.abs(daysUntilWork)}일 전 작업 예정이었음`;
+    timeInfo = `Work was ${Math.abs(daysUntilWork)} days ago`;
   }
 
-  return `${groupInfo} • ${getStatusKorean(customer.status)} • ${timeInfo}`;
+  return `${groupInfo} • ${programType} • ${getStatusEnglish(customer.status)} • ${timeInfo}`;
 }
