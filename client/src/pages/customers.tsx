@@ -68,7 +68,20 @@ export default function Customers() {
     }
   });
 
-  const displayedCustomers = searchQuery.trim() ? searchResults : customers;
+  // Filter customers by search query and date
+  const filteredCustomers = customers.filter((customer: Customer) => {
+    const matchesQuery = !searchQuery.trim() || 
+      customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      customer.phone.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (customer.email && customer.email.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    const matchesDate = !searchDate || 
+      new Date(customer.workDate).toISOString().split('T')[0] === searchDate;
+    
+    return matchesQuery && matchesDate;
+  });
+
+  const displayedCustomers = filteredCustomers;
 
   const startEdit = (customer: Customer) => {
     setEditingCustomer(customer);
@@ -77,13 +90,14 @@ export default function Customers() {
       phone: customer.phone,
       email: customer.email || "",
       workDate: typeof customer.workDate === 'string' ? customer.workDate : customer.workDate.toISOString().split('T')[0],
-      status: customer.status
+      status: customer.status,
+      programType: customer.programType || "painting"
     });
   };
 
   const cancelEdit = () => {
     setEditingCustomer(null);
-    setEditForm({ name: "", phone: "", email: "", workDate: "", status: "" });
+    setEditForm({ name: "", phone: "", email: "", workDate: "", status: "", programType: "" });
   };
 
   const saveEdit = () => {
@@ -125,6 +139,24 @@ export default function Customers() {
     return statusMap[status] || status;
   };
 
+  const getProgramTypeText = (programType: string) => {
+    const programMap: Record<string, string> = {
+      "painting": "Painting",
+      "one_time_ceramic": "One-Time Ceramic",
+      "advanced_ceramic": "Advanced Ceramic"
+    };
+    return programMap[programType] || programType;
+  };
+
+  const getProgramTypeBadge = (programType: string) => {
+    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+      "painting": "default",
+      "one_time_ceramic": "secondary",
+      "advanced_ceramic": "outline"
+    };
+    return variants[programType] || "outline";
+  };
+
   const suggestedDates = getSuggestedDates();
 
   return (
@@ -135,8 +167,8 @@ export default function Customers() {
           <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
             <Users className="text-primary" size={32} />
           </div>
-          <h1 className="text-3xl font-bold text-slate-800 mb-2">Customer Management</h1>
-          <p className="text-slate-600">Search and edit customer information</p>
+          <h1 className="text-3xl font-bold text-slate-800 mb-2">Studio Customer Management</h1>
+          <p className="text-slate-600">Search and manage pottery studio customers</p>
         </div>
 
 
@@ -146,18 +178,37 @@ export default function Customers() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Search className="h-5 w-5" />
-              Customer Search
+              Search Customers
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
-              <Input
-                placeholder="Search by name, phone, or email..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+                <Input
+                  placeholder="Search by name, phone, or email..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <div className="relative">
+                <Input
+                  type="date"
+                  placeholder="Filter by work date"
+                  value={searchDate}
+                  onChange={(e) => setSearchDate(e.target.value)}
+                  className="w-full"
+                />
+                {searchDate && (
+                  <button
+                    onClick={() => setSearchDate("")}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -166,7 +217,7 @@ export default function Customers() {
         <Card>
           <CardHeader>
             <CardTitle>
-              {searchQuery ? `Search Results (${displayedCustomers.length})` : `All Customers (${customers.length})`}
+              {searchQuery || searchDate ? `Filtered Results (${displayedCustomers.length})` : `All Customers (${customers.length})`}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -288,6 +339,9 @@ export default function Customers() {
                               <h3 className="text-lg font-semibold text-slate-800">{customer.name}</h3>
                               <Badge variant={getStatusBadge(customer.status)}>
                                 {getStatusText(customer.status)}
+                              </Badge>
+                              <Badge variant={getProgramTypeBadge(customer.programType || "painting")}>
+                                {getProgramTypeText(customer.programType || "painting")}
                               </Badge>
                               {customer.isGroup === "true" && (
                                 <Badge variant="secondary" className="bg-purple-100 text-purple-800">
