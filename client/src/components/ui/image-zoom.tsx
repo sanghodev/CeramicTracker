@@ -1,7 +1,5 @@
 import { useState } from "react";
-import { X, ZoomIn } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ZoomIn, X } from "lucide-react";
 
 interface ImageZoomProps {
   src: string;
@@ -13,8 +11,11 @@ interface ImageZoomProps {
 export function ImageZoom({ src, alt, className = "", thumbnailClassName = "w-20 h-20 sm:w-24 sm:h-24" }: ImageZoomProps) {
   const [isOpen, setIsOpen] = useState(false);
 
+  if (!src) return null;
+
   return (
     <>
+      {/* Thumbnail with hover effect */}
       <div className={`relative group cursor-pointer ${className}`}>
         <img
           src={src}
@@ -27,30 +28,33 @@ export function ImageZoom({ src, alt, className = "", thumbnailClassName = "w-20
         </div>
       </div>
 
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] p-0">
-          <DialogHeader className="p-4 pb-0">
-            <DialogTitle className="flex justify-between items-center">
-              <span>{alt}</span>
-              <Button
-                variant="ghost"
-                size="sm"
+      {/* Modal overlay */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+          onClick={() => setIsOpen(false)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh] bg-white rounded-lg overflow-hidden">
+            <div className="flex justify-between items-center p-4 border-b">
+              <h3 className="text-lg font-semibold">{alt}</h3>
+              <button
                 onClick={() => setIsOpen(false)}
-                className="h-8 w-8 p-0"
+                className="p-2 hover:bg-gray-100 rounded-full"
               >
-                <X className="h-4 w-4" />
-              </Button>
-            </DialogTitle>
-          </DialogHeader>
-          <div className="p-4">
-            <img
-              src={src}
-              alt={alt}
-              className="w-full h-auto max-h-[70vh] object-contain rounded-lg"
-            />
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-4">
+              <img
+                src={src}
+                alt={alt}
+                className="w-full h-auto max-h-[70vh] object-contain"
+                onClick={(e) => e.stopPropagation()}
+              />
+            </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
     </>
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Check, Save, X, CheckCircle, Calendar, Clock, Camera, Upload } from "lucide-react";
@@ -16,6 +16,7 @@ const formSchema = insertCustomerSchema.extend({
   workDate: z.string().min(1, "Please enter work date"),
   isGroup: z.string().default("false"),
   groupSize: z.string().optional(),
+  customerImage: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -146,6 +147,29 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
   const selectSuggestedDate = (dateValue: string) => {
     form.setValue("workDate", dateValue);
   };
+
+  // Handle data from camera capture
+  useEffect(() => {
+    if (initialData) {
+      form.setValue("name", initialData.name || "");
+      form.setValue("phone", initialData.phone || "");
+      form.setValue("email", initialData.email || "");
+      form.setValue("workDate", initialData.workDate || new Date().toISOString().split('T')[0]);
+      
+      setPhoneValue(initialData.phone || "");
+      setEmailValue(initialData.email || "");
+      
+      if (initialData.workImage) {
+        setWorkImagePreview(initialData.workImage);
+        form.setValue("workImage", initialData.workImage);
+      }
+      
+      if (initialData.customerImage) {
+        setCustomerImagePreview(initialData.customerImage);
+        form.setValue("customerImage", initialData.customerImage);
+      }
+    }
+  }, [initialData, form]);
 
   return (
     <section className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
