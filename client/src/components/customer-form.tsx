@@ -278,18 +278,18 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
                   ))}
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs text-slate-600">For groups larger than 6 people:</label>
+                  <label className="text-xs text-slate-600">Or enter group size directly:</label>
                   <Input
                     type="tel"
                     inputMode="numeric"
                     pattern="[0-9]*"
-                    min="7"
+                    min="1"
                     max="50"
-                    placeholder="Enter group size (7+)"
-                    value={parseInt(groupSize) > 6 ? groupSize : ""}
+                    placeholder="Enter group size (1-50)"
+                    value={groupSize}
                     onChange={(e) => {
                       const value = e.target.value.replace(/[^0-9]/g, '');
-                      if (value && parseInt(value) >= 7) {
+                      if (value && parseInt(value) >= 1 && parseInt(value) <= 50) {
                         setGroupSize(value);
                         form.setValue("groupSize", value);
                       } else if (!value) {
