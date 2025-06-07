@@ -10,6 +10,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatPhoneNumber, isValidEmail, getSuggestedDates } from "@/lib/ocr";
 import type { Customer } from "@shared/schema";
+import TestImageZoom from "@/components/test-image-zoom";
 
 export default function Customers() {
   const { toast } = useToast();
@@ -134,6 +135,11 @@ export default function Customers() {
           <h1 className="text-3xl font-bold text-slate-800 mb-2">Customer Management</h1>
           <p className="text-slate-600">Search and edit customer information</p>
         </div>
+
+        {/* Test Image Zoom - Development Only */}
+        {process.env.NODE_ENV === 'development' && (
+          <TestImageZoom />
+        )}
 
         {/* Search */}
         <Card>
@@ -330,6 +336,13 @@ export default function Customers() {
                               {!customer.customerImage && !customer.workImage && (
                                 <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-100 border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center">
                                   <span className="text-slate-400 text-xs">이미지 없음</span>
+                                </div>
+                              )}
+                              {/* Debug info - remove after testing */}
+                              {process.env.NODE_ENV === 'development' && (
+                                <div className="text-xs text-slate-500 mt-1">
+                                  <div>Customer: {customer.customerImage ? '있음' : '없음'}</div>
+                                  <div>Work: {customer.workImage ? '있음' : '없음'}</div>
                                 </div>
                               )}
                             </div>
