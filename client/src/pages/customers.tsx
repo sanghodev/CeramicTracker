@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Search, Edit2, Save, X, Users } from "lucide-react";
+import { Search, Edit2, Save, X, Users, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -96,13 +96,28 @@ export default function Customers() {
       email: customer.email || "",
       workDate: typeof customer.workDate === 'string' ? customer.workDate : customer.workDate.toISOString().split('T')[0],
       status: customer.status,
-      programType: customer.programType || "painting"
+      programType: customer.programType || "painting",
+      contactStatus: customer.contactStatus || "not_contacted",
+      storageLocation: customer.storageLocation || "",
+      pickupStatus: customer.pickupStatus || "not_picked_up",
+      notes: customer.notes || ""
     });
   };
 
   const cancelEdit = () => {
     setEditingCustomer(null);
-    setEditForm({ name: "", phone: "", email: "", workDate: "", status: "", programType: "" });
+    setEditForm({ 
+      name: "", 
+      phone: "", 
+      email: "", 
+      workDate: "", 
+      status: "", 
+      programType: "",
+      contactStatus: "",
+      storageLocation: "",
+      pickupStatus: "",
+      notes: ""
+    });
   };
 
   const saveEdit = () => {
@@ -114,7 +129,12 @@ export default function Customers() {
         name: editForm.name,
         phone: editForm.phone,
         email: editForm.email || null,
-        status: editForm.status
+        status: editForm.status,
+        programType: editForm.programType,
+        contactStatus: editForm.contactStatus,
+        storageLocation: editForm.storageLocation || null,
+        pickupStatus: editForm.pickupStatus,
+        notes: editForm.notes || null
       }
     });
   };
@@ -162,6 +182,64 @@ export default function Customers() {
     return variants[programType] || "outline";
   };
 
+  const exportToCSV = () => {
+    const now = new Date();
+    let filteredData = customers;
+
+    // Filter by date range
+    if (exportDateRange !== "all") {
+      const daysAgo = exportDateRange === "1month" ? 30 : 
+                     exportDateRange === "2months" ? 60 : 
+                     exportDateRange === "3months" ? 90 : 0;
+      
+      if (daysAgo > 0) {
+        const cutoffDate = new Date(now.getTime() - (daysAgo * 24 * 60 * 60 * 1000));
+        filteredData = customers.filter((customer: Customer) => 
+          new Date(customer.workDate) >= cutoffDate
+        );
+      }
+    }
+
+    // Create CSV content
+    const headers = [
+      "Name", "Phone", "Email", "Work Date", "Status", "Program Type",
+      "Contact Status", "Storage Location", "Pickup Status", "Notes", "Created Date"
+    ];
+    
+    const csvContent = [
+      headers.join(","),
+      ...filteredData.map(customer => [
+        `"${customer.name}"`,
+        `"${customer.phone}"`,
+        `"${customer.email || ""}"`,
+        `"${new Date(customer.workDate).toLocaleDateString()}"`,
+        `"${getStatusText(customer.status)}"`,
+        `"${getProgramTypeText(customer.programType || "painting")}"`,
+        `"${customer.contactStatus?.replace('_', ' ') || "Not Contacted"}"`,
+        `"${customer.storageLocation || ""}"`,
+        `"${customer.pickupStatus?.replace('_', ' ') || "Not Picked Up"}"`,
+        `"${customer.notes || ""}"`,
+        `"${new Date(customer.createdAt).toLocaleDateString()}"`
+      ].join(","))
+    ].join("\n");
+
+    // Download CSV file
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `customers_export_${exportDateRange}_${now.toISOString().split('T')[0]}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Export Complete",
+      description: `Exported ${filteredData.length} customers to CSV file.`,
+    });
+  };
+
   const suggestedDates = getSuggestedDates();
 
   return (
@@ -187,32 +265,60 @@ export default function Customers() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
-                <Input
-                  placeholder="Search by name, phone, or email..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+                  <Input
+                    placeholder="Search by name, phone, or email..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <div className="relative">
+                  <Input
+                    type="date"
+                    placeholder="Filter by work date"
+                    value={searchDate}
+                    onChange={(e) => setSearchDate(e.target.value)}
+                    className="w-full"
+                  />
+                  {searchDate && (
+                    <button
+                      onClick={() => setSearchDate("")}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="relative">
-                <Input
-                  type="date"
-                  placeholder="Filter by work date"
-                  value={searchDate}
-                  onChange={(e) => setSearchDate(e.target.value)}
-                  className="w-full"
-                />
-                {searchDate && (
-                  <button
-                    onClick={() => setSearchDate("")}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
+              
+              {/* Export Section */}
+              <div className="border-t pt-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Download className="h-4 w-4 text-slate-600" />
+                    <span className="text-sm font-medium text-slate-700">Export Data:</span>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-2 flex-1">
+                    <select
+                      value={exportDateRange}
+                      onChange={(e) => setExportDateRange(e.target.value)}
+                      className="px-3 py-2 border border-slate-300 rounded-md text-sm"
+                    >
+                      <option value="all">All Time</option>
+                      <option value="1month">Last 1 Month</option>
+                      <option value="2months">Last 2 Months</option>
+                      <option value="3months">Last 3 Months</option>
+                    </select>
+                    <Button onClick={exportToCSV} variant="outline" size="sm">
+                      <Download className="h-4 w-4 mr-2" />
+                      Export to Excel
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
           </CardContent>
