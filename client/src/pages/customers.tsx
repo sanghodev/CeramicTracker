@@ -208,7 +208,7 @@ export default function Customers() {
     
     const csvContent = [
       headers.join(","),
-      ...filteredData.map(customer => [
+      ...filteredData.map((customer: Customer) => [
         `"${customer.name}"`,
         `"${customer.phone}"`,
         `"${customer.email || ""}"`,
@@ -534,6 +534,37 @@ export default function Customers() {
                                 <div className="col-span-full">🏷️ Group ID: {customer.groupId}</div>
                               )}
                             </div>
+                            
+                            {/* Staff Workflow Information */}
+                            <div className="border-t pt-3 mt-3">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-slate-700">Contact:</span>
+                                  <Badge variant={customer.contactStatus === "confirmed" ? "default" : customer.contactStatus === "contacted" ? "secondary" : "outline"} className="text-xs">
+                                    {customer.contactStatus === "confirmed" ? "Confirmed" : 
+                                     customer.contactStatus === "contacted" ? "Contacted" : "Not Contacted"}
+                                  </Badge>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-slate-700">Pickup:</span>
+                                  <Badge variant={customer.pickupStatus === "picked_up" ? "default" : "outline"} className="text-xs">
+                                    {customer.pickupStatus === "picked_up" ? "Picked Up" : "Not Picked Up"}
+                                  </Badge>
+                                </div>
+                                {customer.storageLocation && (
+                                  <div className="col-span-full flex items-center gap-2">
+                                    <span className="font-medium text-slate-700">Storage:</span>
+                                    <span className="text-slate-600">{customer.storageLocation}</span>
+                                  </div>
+                                )}
+                                {customer.notes && (
+                                  <div className="col-span-full">
+                                    <span className="font-medium text-slate-700">Notes:</span>
+                                    <p className="text-slate-600 mt-1 text-xs leading-relaxed">{customer.notes}</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           </div>
                           
                           <div className="flex items-center gap-4">
@@ -543,11 +574,11 @@ export default function Customers() {
                                 <div className="relative group">
                                   <ImageZoom
                                     src={customer.customerImage}
-                                    alt={`${customer.name}의 정보 이미지`}
+                                    alt={`${customer.name}'s information image`}
                                     thumbnailClassName="w-16 h-16 sm:w-20 sm:h-20 border-2 border-blue-200 hover:border-blue-400 transition-colors"
                                   />
                                   <div className="absolute -bottom-1 -right-1 bg-blue-500 text-white text-xs px-1.5 py-0.5 rounded-full text-[10px] font-medium shadow-sm">
-                                    정보
+                                    Info
                                   </div>
                                 </div>
                               )}
@@ -555,24 +586,24 @@ export default function Customers() {
                                 <div className="relative group">
                                   <ImageZoom
                                     src={customer.workImage}
-                                    alt={`${customer.name}의 작업 이미지`}
+                                    alt={`${customer.name}'s work image`}
                                     thumbnailClassName="w-16 h-16 sm:w-20 sm:h-20 border-2 border-green-200 hover:border-green-400 transition-colors"
                                   />
                                   <div className="absolute -bottom-1 -right-1 bg-green-500 text-white text-xs px-1.5 py-0.5 rounded-full text-[10px] font-medium shadow-sm">
-                                    작업
+                                    Work
                                   </div>
                                 </div>
                               )}
                               {!customer.customerImage && !customer.workImage && (
                                 <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-100 border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center">
-                                  <span className="text-slate-400 text-xs">이미지 없음</span>
+                                  <span className="text-slate-400 text-xs">No Images</span>
                                 </div>
                               )}
                               {/* Debug info - remove after testing */}
                               {process.env.NODE_ENV === 'development' && (
                                 <div className="text-xs text-slate-500 mt-1">
-                                  <div>Customer: {customer.customerImage ? '있음' : '없음'}</div>
-                                  <div>Work: {customer.workImage ? '있음' : '없음'}</div>
+                                  <div>Customer: {customer.customerImage ? 'Present' : 'None'}</div>
+                                  <div>Work: {customer.workImage ? 'Present' : 'None'}</div>
                                 </div>
                               )}
                             </div>
@@ -586,7 +617,7 @@ export default function Customers() {
                                 className="flex-shrink-0"
                               >
                                 <Edit2 className="h-4 w-4 mr-1 sm:mr-2" />
-                                <span className="hidden sm:inline">편집</span>
+                                <span className="hidden sm:inline">Edit</span>
                               </Button>
                             </div>
                           </div>
