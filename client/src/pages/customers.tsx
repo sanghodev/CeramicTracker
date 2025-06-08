@@ -25,8 +25,13 @@ export default function Customers() {
     email: "",
     workDate: "",
     status: "",
-    programType: ""
+    programType: "",
+    contactStatus: "",
+    storageLocation: "",
+    pickupStatus: "",
+    notes: ""
   });
+  const [exportDateRange, setExportDateRange] = useState("all");
 
   const { data: customers = [], isLoading } = useQuery({
     queryKey: ["/api/customers"],
@@ -323,6 +328,54 @@ export default function Customers() {
                               <option value="advanced_ceramic">Advanced Ceramic</option>
                             </select>
                           </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Contact Status</label>
+                            <select
+                              value={editForm.contactStatus || "not_contacted"}
+                              onChange={(e) => setEditForm(prev => ({ ...prev, contactStatus: e.target.value }))}
+                              className="w-full p-2 border border-slate-300 rounded-md"
+                            >
+                              <option value="not_contacted">Not Contacted</option>
+                              <option value="contacted">Contacted</option>
+                              <option value="confirmed">Confirmed</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Pickup Status</label>
+                            <select
+                              value={editForm.pickupStatus || "not_picked_up"}
+                              onChange={(e) => setEditForm(prev => ({ ...prev, pickupStatus: e.target.value }))}
+                              className="w-full p-2 border border-slate-300 rounded-md"
+                            >
+                              <option value="not_picked_up">Not Picked Up</option>
+                              <option value="picked_up">Picked Up</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Storage Location</label>
+                          <input
+                            type="text"
+                            value={editForm.storageLocation || ""}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, storageLocation: e.target.value }))}
+                            placeholder="Enter storage location (e.g., Shelf A-3, Room B)"
+                            className="w-full p-2 border border-slate-300 rounded-md"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Notes</label>
+                          <textarea
+                            value={editForm.notes || ""}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, notes: e.target.value }))}
+                            placeholder="Enter staff notes..."
+                            rows={3}
+                            className="w-full p-2 border border-slate-300 rounded-md resize-none"
+                          />
                         </div>
 
                         <div className="flex flex-col sm:flex-row gap-2 pt-2">

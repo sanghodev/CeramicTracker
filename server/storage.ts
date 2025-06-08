@@ -74,6 +74,10 @@ export class MemStorage implements IStorage {
       isGroup: insertCustomer.isGroup || "false",
       groupId: insertCustomer.groupId ?? null,
       groupSize: insertCustomer.groupSize ?? null,
+      contactStatus: "not_contacted",
+      storageLocation: null,
+      pickupStatus: "not_picked_up",
+      notes: null,
       createdAt: new Date(),
     };
     this.customers.push(customer);
