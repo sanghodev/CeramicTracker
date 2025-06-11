@@ -4,6 +4,7 @@ import { z } from "zod";
 
 export const customers = pgTable("customers", {
   id: serial("id").primaryKey(),
+  customerId: varchar("customer_id", { length: 20 }).notNull().unique(), // Format: YYMMDD-ProgramType-Number (e.g., 250611-P-001)
   name: varchar("name", { length: 100 }).notNull(),
   phone: varchar("phone", { length: 20 }).notNull(),
   email: varchar("email", { length: 255 }),
@@ -24,6 +25,7 @@ export const customers = pgTable("customers", {
 
 export const insertCustomerSchema = createInsertSchema(customers).omit({
   id: true,
+  customerId: true,
   createdAt: true,
 }).extend({
   workDate: z.string().transform((str) => new Date(str)),

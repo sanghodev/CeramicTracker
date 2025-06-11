@@ -202,13 +202,14 @@ export default function Customers() {
 
     // Create CSV content
     const headers = [
-      "Name", "Phone", "Email", "Work Date", "Status", "Program Type",
+      "Customer ID", "Name", "Phone", "Email", "Work Date", "Status", "Program Type",
       "Contact Status", "Storage Location", "Pickup Status", "Notes", "Created Date"
     ];
     
     const csvContent = [
       headers.join(","),
       ...filteredData.map((customer: Customer) => [
+        `"${customer.customerId || ""}"`,
         `"${customer.name}"`,
         `"${customer.phone}"`,
         `"${customer.email || ""}"`,
