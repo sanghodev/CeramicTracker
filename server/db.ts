@@ -12,13 +12,44 @@ if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL must be set. Did you forget to provision a database?");
 }
 
-// Simplified database connection - use HTTP only for reliability
-const sql = neon(process.env.DATABASE_URL);
-export const db = drizzle(sql, { schema });
+// Create database connection with enhanced error handling
+let db: any = null;
 
-console.log('Database connection established with HTTP client');
+function createConnection() {
+  console.log('[DB] Creating database connection...');
+  try {
+    const databaseUrl = process.env.DATABASE_URL;
+    if (!databaseUrl) {
+      throw new Error('DATABASE_URL is required');
+    }
+    const sql = neon(databaseUrl);
+    db = drizzle(sql, { schema });
+    console.log('[DB] Database connection established with HTTP client');
+    return db;
+  } catch (error: any) {
+    console.error('[DB] Failed to create connection:', error);
+    throw error;
+  }
+}
+
+// Initialize connection
+db = createConnection();
 
 // Test the connection
-db.execute('SELECT 1 as test')
-  .then(() => console.log('Database connection test successful'))
-  .catch(err => console.error('Database connection test failed:', err.message));
+async function testConnection() {
+  try {
+    console.log('[DB] Testing connection...');
+    await db.execute('SELECT 1 as test');
+    console.log('[DB] Connection test successful');
+  } catch (error: any) {
+    console.error('[DB] Connection test failed:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code
+    });
+  }
+}
+
+testConnection();
+
+export { db };
