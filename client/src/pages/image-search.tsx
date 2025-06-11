@@ -151,7 +151,8 @@ export default function ImageSearch() {
         // Check customer image
         if (customer.customerImage) {
           const similarity = await compareImages(capturedImage, customer.customerImage);
-          if (similarity > 0.3) { // 30% similarity threshold
+          console.log(`Customer ${customer.name} (customer image): ${(similarity * 100).toFixed(1)}% similarity`);
+          if (similarity > 0.15) { // Lowered threshold to 15%
             matches.push({
               customer,
               similarity,
@@ -163,7 +164,8 @@ export default function ImageSearch() {
         // Check work image
         if (customer.workImage) {
           const similarity = await compareImages(capturedImage, customer.workImage);
-          if (similarity > 0.3) {
+          console.log(`Customer ${customer.name} (work image): ${(similarity * 100).toFixed(1)}% similarity`);
+          if (similarity > 0.15) { // Lowered threshold to 15%
             matches.push({
               customer,
               similarity,
@@ -192,7 +194,7 @@ export default function ImageSearch() {
     }
   };
 
-  // Basic image comparison using canvas pixel data
+  // Enhanced image comparison using multiple techniques
   const compareImages = async (img1: string, img2: string): Promise<number> => {
     return new Promise((resolve) => {
       const canvas1 = document.createElement('canvas');
@@ -205,11 +207,13 @@ export default function ImageSearch() {
       
       let loadedCount = 0;
       
+
+
       const processImages = () => {
         if (loadedCount < 2) return;
         
-        // Resize images to same size for comparison
-        const size = 100;
+        // Use larger size for better comparison
+        const size = 64;
         canvas1.width = canvas2.width = size;
         canvas1.height = canvas2.height = size;
         
@@ -224,25 +228,139 @@ export default function ImageSearch() {
           return;
         }
         
-        // Calculate similarity using normalized cross-correlation
-        let correlation = 0;
-        const length = data1.length;
+        // Multiple comparison techniques
+        const histogramSimilarity = compareHistograms(data1, data2);
+        const structuralSimilarity = compareStructural(data1, data2, size);
+        const colorSimilarity = compareColorDistribution(data1, data2);
+        const pixelSimilarity = comparePixels(data1, data2);
         
-        for (let i = 0; i < length; i += 4) {
-          const r1 = data1[i] / 255;
-          const g1 = data1[i + 1] / 255;
-          const b1 = data1[i + 2] / 255;
-          
-          const r2 = data2[i] / 255;
-          const g2 = data2[i + 1] / 255;
-          const b2 = data2[i + 2] / 255;
-          
-          // Simple correlation calculation
-          correlation += (r1 * r2 + g1 * g2 + b1 * b2) / 3;
+        // Debug logging
+        console.log('Similarity scores:', {
+          histogram: histogramSimilarity.toFixed(3),
+          structural: structuralSimilarity.toFixed(3),
+          color: colorSimilarity.toFixed(3),
+          pixel: pixelSimilarity.toFixed(3)
+        });
+        
+        // Weighted combination of different similarities
+        const combinedSimilarity = Math.max(
+          histogramSimilarity * 0.3 +
+          structuralSimilarity * 0.3 +
+          colorSimilarity * 0.2 +
+          pixelSimilarity * 0.2,
+          // Use best individual score if combined is low
+          Math.max(histogramSimilarity, structuralSimilarity, colorSimilarity, pixelSimilarity) * 0.7
+        );
+        
+        resolve(Math.max(0, Math.min(1, combinedSimilarity)));
+      };
+      
+      // Color histogram comparison
+      const compareHistograms = (data1: Uint8ClampedArray, data2: Uint8ClampedArray): number => {
+        const hist1 = new Array(256).fill(0);
+        const hist2 = new Array(256).fill(0);
+        
+        for (let i = 0; i < data1.length; i += 4) {
+          const gray1 = Math.round(0.299 * data1[i] + 0.587 * data1[i + 1] + 0.114 * data1[i + 2]);
+          const gray2 = Math.round(0.299 * data2[i] + 0.587 * data2[i + 1] + 0.114 * data2[i + 2]);
+          hist1[gray1]++;
+          hist2[gray2]++;
         }
         
-        const similarity = correlation / (length / 4);
-        resolve(Math.max(0, Math.min(1, similarity)));
+        // Normalize histograms
+        const totalPixels = data1.length / 4;
+        for (let i = 0; i < 256; i++) {
+          hist1[i] /= totalPixels;
+          hist2[i] /= totalPixels;
+        }
+        
+        // Calculate intersection
+        let intersection = 0;
+        for (let i = 0; i < 256; i++) {
+          intersection += Math.min(hist1[i], hist2[i]);
+        }
+        
+        return intersection;
+      };
+      
+      // Structural similarity (simplified SSIM)
+      const compareStructural = (data1: Uint8ClampedArray, data2: Uint8ClampedArray, size: number): number => {
+        let sumSquaredDiff = 0;
+        let mean1 = 0, mean2 = 0;
+        const totalPixels = data1.length / 4;
+        
+        // Calculate means
+        for (let i = 0; i < data1.length; i += 4) {
+          const gray1 = 0.299 * data1[i] + 0.587 * data1[i + 1] + 0.114 * data1[i + 2];
+          const gray2 = 0.299 * data2[i] + 0.587 * data2[i + 1] + 0.114 * data2[i + 2];
+          mean1 += gray1;
+          mean2 += gray2;
+        }
+        mean1 /= totalPixels;
+        mean2 /= totalPixels;
+        
+        // Calculate variance and covariance
+        let var1 = 0, var2 = 0, covar = 0;
+        for (let i = 0; i < data1.length; i += 4) {
+          const gray1 = 0.299 * data1[i] + 0.587 * data1[i + 1] + 0.114 * data1[i + 2];
+          const gray2 = 0.299 * data2[i] + 0.587 * data2[i + 1] + 0.114 * data2[i + 2];
+          
+          const diff1 = gray1 - mean1;
+          const diff2 = gray2 - mean2;
+          
+          var1 += diff1 * diff1;
+          var2 += diff2 * diff2;
+          covar += diff1 * diff2;
+        }
+        
+        var1 /= totalPixels;
+        var2 /= totalPixels;
+        covar /= totalPixels;
+        
+        // SSIM calculation
+        const c1 = 0.01 * 255 * 0.01 * 255;
+        const c2 = 0.03 * 255 * 0.03 * 255;
+        
+        const numerator = (2 * mean1 * mean2 + c1) * (2 * covar + c2);
+        const denominator = (mean1 * mean1 + mean2 * mean2 + c1) * (var1 + var2 + c2);
+        
+        return denominator > 0 ? numerator / denominator : 0;
+      };
+      
+      // Color distribution comparison
+      const compareColorDistribution = (data1: Uint8ClampedArray, data2: Uint8ClampedArray): number => {
+        let rSum1 = 0, gSum1 = 0, bSum1 = 0;
+        let rSum2 = 0, gSum2 = 0, bSum2 = 0;
+        const totalPixels = data1.length / 4;
+        
+        for (let i = 0; i < data1.length; i += 4) {
+          rSum1 += data1[i];
+          gSum1 += data1[i + 1];
+          bSum1 += data1[i + 2];
+          
+          rSum2 += data2[i];
+          gSum2 += data2[i + 1];
+          bSum2 += data2[i + 2];
+        }
+        
+        const avgR1 = rSum1 / totalPixels;
+        const avgG1 = gSum1 / totalPixels;
+        const avgB1 = bSum1 / totalPixels;
+        
+        const avgR2 = rSum2 / totalPixels;
+        const avgG2 = gSum2 / totalPixels;
+        const avgB2 = bSum2 / totalPixels;
+        
+        // Calculate color distance
+        const colorDistance = Math.sqrt(
+          Math.pow(avgR1 - avgR2, 2) +
+          Math.pow(avgG1 - avgG2, 2) +
+          Math.pow(avgB1 - avgB2, 2)
+        );
+        
+        // Convert distance to similarity (0-1)
+        const maxDistance = Math.sqrt(3 * 255 * 255);
+        return 1 - (colorDistance / maxDistance);
       };
       
       image1.onload = () => {
@@ -253,6 +371,14 @@ export default function ImageSearch() {
       image2.onload = () => {
         loadedCount++;
         processImages();
+      };
+      
+      image1.onerror = () => {
+        resolve(0);
+      };
+      
+      image2.onerror = () => {
+        resolve(0);
       };
       
       image1.src = img1;
