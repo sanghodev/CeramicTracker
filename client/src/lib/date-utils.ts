@@ -76,7 +76,8 @@ export function formatCustomerId(customerId: string): string {
 
 export function formatDateForInput(date: Date | string): string {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
-  // Format for HTML date input (YYYY-MM-DD) in Eastern Time
-  const easternDate = new Date(dateObj.toLocaleString("en-US", {timeZone: "America/New_York"}));
-  return easternDate.toISOString().split('T')[0];
+  // Add timezone offset to prevent date shifting
+  const timezoneOffset = dateObj.getTimezoneOffset() * 60000;
+  const localDate = new Date(dateObj.getTime() - timezoneOffset);
+  return localDate.toISOString().split('T')[0];
 }

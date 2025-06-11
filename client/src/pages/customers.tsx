@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +28,14 @@ export default function Customers() {
     notes: ""
   });
 
+  const { data: customers = [] } = useQuery({
+    queryKey: ["/api/customers"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/customers");
+      return response.json();
+    }
+  });
+
   const updateMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: number; updates: any }) => {
       const response = await apiRequest("PATCH", `/api/customers/${id}`, updates);
@@ -49,11 +57,63 @@ export default function Customers() {
         notes: ""
       });
       toast({
-        title: "고객 정보 업데이트됨",
-        description: "고객 정보가 성공적으로 업데이트되었습니다.",
+        title: "Customer Information Updated",
+        description: "Customer information has been successfully updated.",
       });
     }
   });
+
+  const downloadAllImages = async () => {
+    try {
+      const customersWithImages = customers.filter((customer: Customer) => 
+        customer.customerImage || customer.workImage
+      );
+
+      if (customersWithImages.length === 0) {
+        toast({
+          title: "No Images Found",
+          description: "No customers have uploaded images.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      customersWithImages.forEach((customer: Customer, index: number) => {
+        setTimeout(() => {
+          // Download customer image
+          if (customer.customerImage) {
+            const link = document.createElement('a');
+            link.href = customer.customerImage;
+            link.download = `${customer.customerId}_customer_info.jpg`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }
+
+          // Download work image
+          if (customer.workImage) {
+            const link = document.createElement('a');
+            link.href = customer.workImage;
+            link.download = `${customer.customerId}_artwork.jpg`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }
+        }, index * 500); // 500ms delay between downloads
+      });
+
+      toast({
+        title: "Image Download Started",
+        description: `Downloading ${customersWithImages.length} customer images.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Download Failed",
+        description: "An error occurred while downloading images.",
+        variant: "destructive"
+      });
+    }
+  };
 
   const startEdit = (customer: Customer) => {
     setEditingCustomer(customer);
@@ -113,13 +173,13 @@ export default function Customers() {
       window.URL.revokeObjectURL(url);
       
       toast({
-        title: "CSV 내보내기 완료",
-        description: "고객 데이터가 성공적으로 내보내졌습니다.",
+        title: "CSV Export Complete",
+        description: "Customer data has been successfully exported.",
       });
     } catch (error) {
       toast({
-        title: "내보내기 실패",
-        description: "데이터 내보내기 중 오류가 발생했습니다.",
+        title: "Export Failed",
+        description: "An error occurred while exporting data.",
         variant: "destructive"
       });
     }
@@ -130,7 +190,7 @@ export default function Customers() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Studio Customer Management</h1>
-          <p className="text-slate-600 mt-1">성능 최적화된 고객 관리 시스템</p>
+          <p className="text-slate-600 mt-1">Performance optimized customer management system</p>
         </div>
       </div>
 
@@ -138,7 +198,7 @@ export default function Customers() {
         {/* Export Controls */}
         <Card>
           <CardHeader>
-            <CardTitle>데이터 내보내기</CardTitle>
+            <CardTitle>Data Export</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
@@ -148,14 +208,18 @@ export default function Customers() {
                   onChange={(e) => setExportDateRange(e.target.value)}
                   className="px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="all">모든 데이터</option>
-                  <option value="today">오늘</option>
-                  <option value="week">지난 주</option>
-                  <option value="month">지난 달</option>
+                  <option value="all">All Data</option>
+                  <option value="today">Today</option>
+                  <option value="week">Last Week</option>
+                  <option value="month">Last Month</option>
                 </select>
                 <Button onClick={exportToCSV} variant="outline" size="sm">
                   <Download className="h-4 w-4 mr-2" />
-                  Excel로 내보내기
+                  Export to Excel
+                </Button>
+                <Button onClick={downloadAllImages} variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Images
                 </Button>
               </div>
             </div>
@@ -165,7 +229,7 @@ export default function Customers() {
         {/* Optimized Customer List */}
         <Card>
           <CardHeader>
-            <CardTitle>고객 목록 (성능 최적화)</CardTitle>
+            <CardTitle>Customer List (Performance Optimized)</CardTitle>
           </CardHeader>
           <CardContent>
             <VirtualCustomerList onEdit={startEdit} />
@@ -176,42 +240,42 @@ export default function Customers() {
         {editingCustomer && (
           <Card>
             <CardHeader>
-              <CardTitle>고객 정보 수정</CardTitle>
+              <CardTitle>Edit Customer Information</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">이름</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
                   <input
                     type="text"
                     value={editForm.name}
                     onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
                     className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="고객 이름"
+                    placeholder="Customer name"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">전화번호</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Phone Number</label>
                   <input
                     type="text"
                     value={editForm.phone}
                     onChange={(e) => setEditForm(prev => ({ ...prev, phone: formatPhoneNumber(e.target.value) }))}
                     className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="전화번호"
+                    placeholder="Phone number"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">이메일</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
                   <input
                     type="email"
                     value={editForm.email}
                     onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
                     className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="이메일 주소"
+                    placeholder="Email address"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">작업 날짜</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Work Date</label>
                   <input
                     type="date"
                     value={editForm.workDate}
@@ -220,38 +284,38 @@ export default function Customers() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">상태</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
                   <select
                     value={editForm.status}
                     onChange={(e) => setEditForm(prev => ({ ...prev, status: e.target.value }))}
                     className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="waiting">대기중</option>
-                    <option value="in_progress">진행중</option>
-                    <option value="completed">완료</option>
-                    <option value="picked_up">수령완료</option>
+                    <option value="waiting">Waiting</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                    <option value="picked_up">Picked Up</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">프로그램 유형</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Program Type</label>
                   <select
                     value={editForm.programType}
                     onChange={(e) => setEditForm(prev => ({ ...prev, programType: e.target.value }))}
                     className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="painting">페인팅</option>
-                    <option value="one_time_ceramic">일회성 도자기</option>
-                    <option value="advanced_ceramic">고급 도자기</option>
+                    <option value="painting">Painting</option>
+                    <option value="one_time_ceramic">One-time Ceramic</option>
+                    <option value="advanced_ceramic">Advanced Ceramic</option>
                   </select>
                 </div>
               </div>
               
               <div className="flex space-x-2 mt-6">
                 <Button onClick={handleSaveEdit} disabled={updateMutation.isPending}>
-                  {updateMutation.isPending ? "저장 중..." : "변경사항 저장"}
+                  {updateMutation.isPending ? "Saving..." : "Save Changes"}
                 </Button>
                 <Button variant="outline" onClick={cancelEdit}>
-                  취소
+                  Cancel
                 </Button>
               </div>
             </CardContent>
