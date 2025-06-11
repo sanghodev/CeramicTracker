@@ -76,10 +76,16 @@ async function createDatabaseConnection() {
   }
 }
 
-// Initialize connection
-createDatabaseConnection().catch(err => {
-  console.error('Critical: Database connection initialization failed:', err.message);
-  process.exit(1);
-});
+// Initialize connection and export promise
+const dbInitPromise = createDatabaseConnection();
 
-export { db, pool, connectionType };
+// Export database instance getter to ensure it's initialized
+export const getDb = async () => {
+  await dbInitPromise;
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+  return db;
+};
+
+export { db, pool, connectionType, dbInitPromise };
