@@ -195,6 +195,7 @@ export default function VirtualCustomerList({ onEdit }: VirtualCustomerListProps
       ) : (
         <List
           height={CONTAINER_HEIGHT}
+          width={800}
           itemCount={filteredCustomers.length}
           itemSize={ITEM_HEIGHT}
           className="border border-slate-200 rounded-lg"

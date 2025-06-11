@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { formatPhoneNumber, isValidEmail, getSuggestedDates } from "@/lib/ocr";
 import { formatWorkDate, formatRegistrationDate, formatGroupId, formatDateForInput } from "@/lib/date-utils";
 import type { Customer } from "@shared/schema";
+import VirtualCustomerList from "@/components/virtual-customer-list";
 
 import { ProfileSummaryButton, QuickSummaryBadge } from "@/components/profile-summary";
 
@@ -416,34 +417,103 @@ export default function Customers() {
           </CardContent>
         </Card>
 
-        {/* Customer List */}
+        {/* Customer List - Performance Optimized */}
         <Card>
           <CardHeader>
             <CardTitle>
-              {searchQuery || searchDate ? `Filtered Results (${displayedCustomers.length})` : `All Customers (${customers.length})`}
+              Studio Customer Management (Performance Optimized)
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {isLoading || isSearching ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                <p className="mt-2 text-slate-600">Loading...</p>
-              </div>
-            ) : displayedCustomers.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-slate-600">
-                  {searchQuery ? "No search results found." : "No customers registered yet."}
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {displayedCustomers.map((customer: Customer) => (
-                  <div
-                    key={customer.id}
-                    className="border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+            <VirtualCustomerList onEdit={startEdit} />
+          </CardContent>
+        </Card>
+
+        {/* Customer Edit Modal */}
+        {editingCustomer && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Edit Customer Information</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
+                  <Input
+                    value={editForm.name}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Customer name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+                  <Input
+                    value={editForm.phone}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, phone: formatPhoneNumber(e.target.value) }))}
+                    placeholder="Phone number"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                  <Input
+                    value={editForm.email}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="Email address"
+                    type="email"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Work Date</label>
+                  <Input
+                    type="date"
+                    value={editForm.workDate}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, workDate: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                  <select
+                    value={editForm.status}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, status: e.target.value }))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    {editingCustomer?.id === customer.id ? (
-                      // Edit Mode
+                    <option value="waiting">Waiting</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                    <option value="picked_up">Picked Up</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Program Type</label>
+                  <select
+                    value={editForm.programType}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, programType: e.target.value }))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="painting">Painting</option>
+                    <option value="one_time_ceramic">One-time Ceramic</option>
+                    <option value="advanced_ceramic">Advanced Ceramic</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div className="flex space-x-2 mt-4">
+                <Button onClick={handleSaveEdit} disabled={updateMutation.isPending}>
+                  <Save className="h-4 w-4 mr-2" />
+                  {updateMutation.isPending ? "Saving..." : "Save Changes"}
+                </Button>
+                <Button variant="outline" onClick={cancelEdit}>
+                  <X className="h-4 w-4 mr-2" />
+                  Cancel
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}
                       <div className="space-y-4">
                         <div className="space-y-4">
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
