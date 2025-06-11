@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Check, Save, X, CheckCircle, Calendar, Clock, Camera, Upload } from "lucide-react";
@@ -37,6 +37,9 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
   const [customerImagePreview, setCustomerImagePreview] = useState<string | null>(initialData?.customerImage || null);
   const [isGroupBooking, setIsGroupBooking] = useState(false);
   const [groupSize, setGroupSize] = useState("2");
+  const [showWorkCamera, setShowWorkCamera] = useState(false);
+  const workVideoRef = useRef<HTMLVideoElement>(null);
+  const workCanvasRef = useRef<HTMLCanvasElement>(null);
   const suggestedDates = getSuggestedDates();
 
   const form = useForm<FormData>({
@@ -145,6 +148,70 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
   const removeWorkImage = (field: any) => {
     setWorkImagePreview(null);
     field.onChange("");
+  };
+
+  const startWorkCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'environment' } 
+      });
+      
+      if (workVideoRef.current) {
+        workVideoRef.current.srcObject = stream;
+        setShowWorkCamera(true);
+        
+        toast({
+          title: "Camera Started",
+          description: "Position the work and tap capture when ready.",
+        });
+      }
+    } catch (error) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        if (workVideoRef.current) {
+          workVideoRef.current.srcObject = stream;
+          setShowWorkCamera(true);
+        }
+      } catch (fallbackError) {
+        toast({
+          title: "Camera Access Failed",
+          description: "Please allow camera permissions or use the upload option.",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
+  const stopWorkCamera = () => {
+    if (workVideoRef.current?.srcObject) {
+      const tracks = (workVideoRef.current.srcObject as MediaStream).getTracks();
+      tracks.forEach(track => track.stop());
+      workVideoRef.current.srcObject = null;
+      setShowWorkCamera(false);
+    }
+  };
+
+  const captureWorkPhoto = (field: any) => {
+    if (!workVideoRef.current || !workCanvasRef.current) return;
+
+    const canvas = workCanvasRef.current;
+    const video = workVideoRef.current;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.drawImage(video, 0, 0);
+      const imageData = canvas.toDataURL('image/jpeg', 0.8);
+      setWorkImagePreview(imageData);
+      field.onChange(imageData);
+      stopWorkCamera();
+      
+      toast({
+        title: "Photo Captured",
+        description: "Work photo has been captured successfully.",
+      });
+    }
   };
 
   const selectSuggestedDate = (dateValue: string) => {
@@ -420,33 +487,77 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
                   <FormLabel className="text-sm font-semibold text-slate-700">Work Photo (Optional)</FormLabel>
                   <FormControl>
                     <div className="space-y-4">
-                      {/* Image upload button */}
-                      <div className="flex items-center gap-4">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handleWorkImageUpload(field, e)}
-                          className="hidden"
-                          id="work-image-upload"
-                        />
-                        <label
-                          htmlFor="work-image-upload"
-                          className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg cursor-pointer transition-colors"
-                        >
-                          <Upload className="h-4 w-4" />
-                          Upload Photo
-                        </label>
-                        {workImagePreview && (
+                      {/* Camera and upload buttons */}
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3 flex-wrap">
                           <Button
                             type="button"
                             variant="outline"
-                            size="sm"
-                            onClick={() => removeWorkImage(field)}
-                            className="text-red-600 hover:text-red-700"
+                            onClick={startWorkCamera}
+                            className="inline-flex items-center gap-2 px-4 py-2"
                           >
-                            <X className="h-4 w-4 mr-1" />
-                            Remove
+                            <Camera className="h-4 w-4" />
+                            Take Photo
                           </Button>
+                          
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleWorkImageUpload(field, e)}
+                            className="hidden"
+                            id="work-image-upload"
+                          />
+                          <label
+                            htmlFor="work-image-upload"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg cursor-pointer transition-colors"
+                          >
+                            <Upload className="h-4 w-4" />
+                            Upload Photo
+                          </label>
+                          
+                          {workImagePreview && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => removeWorkImage(field)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <X className="h-4 w-4 mr-1" />
+                              Remove
+                            </Button>
+                          )}
+                        </div>
+
+                        {/* Camera View */}
+                        {showWorkCamera && (
+                          <div className="relative bg-black rounded-lg overflow-hidden">
+                            <video
+                              ref={workVideoRef}
+                              autoPlay
+                              playsInline
+                              className="w-full h-64 object-cover"
+                            />
+                            <canvas ref={workCanvasRef} className="hidden" />
+                            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-3">
+                              <Button
+                                type="button"
+                                onClick={() => captureWorkPhoto(field)}
+                                className="bg-white text-black hover:bg-gray-100 rounded-full w-16 h-16 flex items-center justify-center"
+                              >
+                                <Camera className="h-6 w-6" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={stopWorkCamera}
+                                className="bg-white text-black hover:bg-gray-100"
+                              >
+                                <X className="h-4 w-4 mr-1" />
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
                         )}
                       </div>
                       
