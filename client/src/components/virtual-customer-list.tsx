@@ -83,7 +83,7 @@ export default function VirtualCustomerList({ onEdit }: VirtualCustomerListProps
                     }
                     className="text-xs"
                   >
-                    {customer.status === 'registered' ? 'Registered' :
+                    {customer.status === 'waiting' ? 'Waiting' :
                      customer.status === 'in_progress' ? 'In Progress' :
                      customer.status === 'completed' ? 'Completed' :
                      customer.status === 'picked_up' ? 'Picked Up' : 'Unknown'}
@@ -187,10 +187,10 @@ export default function VirtualCustomerList({ onEdit }: VirtualCustomerListProps
         Total {filteredCustomers.length} customers
       </div>
 
-      {/* 가상 스크롤 리스트 */}
+      {/* Virtual scroll list */}
       {filteredCustomers.length === 0 ? (
         <div className="text-center py-8 text-slate-500">
-          {searchQuery || searchDate ? "검색 결과가 없습니다." : "등록된 고객이 없습니다."}
+          {searchQuery || searchDate ? "No search results found." : "No customers registered yet."}
         </div>
       ) : (
         <List
