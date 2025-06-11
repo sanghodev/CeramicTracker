@@ -11,12 +11,6 @@ export interface IStorage {
   // Customer methods
   getCustomer(id: number): Promise<Customer | undefined>;
   getCustomers(): Promise<Customer[]>;
-  getCustomersWithPagination(page: number, limit: number, sortBy?: string, sortOrder?: string): Promise<{
-    customers: Customer[];
-    total: number;
-    page: number;
-    totalPages: number;
-  }>;
   searchCustomers(query: string): Promise<Customer[]>;
   createCustomer(customer: InsertCustomer): Promise<Customer>;
   updateCustomer(id: number, updates: Partial<InsertCustomer>): Promise<Customer | undefined>;

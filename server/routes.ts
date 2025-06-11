@@ -5,15 +5,13 @@ import { insertCustomerSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Get customers with pagination and optimization
+  // Get all customers with cache headers for optimization
   app.get("/api/customers", async (req, res) => {
     try {
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 50; // 한 번에 50개씩 로드
-      const sortBy = req.query.sortBy as string || 'workDate';
-      const sortOrder = req.query.sortOrder as string || 'desc';
+      // 캐시 헤더 설정으로 클라이언트 측 캐싱 최적화
+      res.set('Cache-Control', 'public, max-age=300'); // 5분 캐시
       
-      const customers = await storage.getCustomersWithPagination(page, limit, sortBy, sortOrder);
+      const customers = await storage.getCustomers();
       res.json(customers);
     } catch (error) {
       console.error("Error fetching customers:", error);
