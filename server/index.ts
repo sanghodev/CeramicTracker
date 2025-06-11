@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { validateEnvironment, getEnvironmentInfo } from "./env-check";
 
 const app = express();
 
@@ -62,6 +63,15 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Validate environment variables before starting
+  try {
+    validateEnvironment();
+    console.log('Server environment info:', getEnvironmentInfo());
+  } catch (error: any) {
+    console.error('Environment validation failed:', error.message);
+    process.exit(1);
+  }
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

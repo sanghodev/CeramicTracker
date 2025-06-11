@@ -26,40 +26,60 @@ if (!process.env.DATABASE_URL) {
 
 let db: any;
 let pool: Pool | null = null;
+let connectionType: 'websocket' | 'http' = 'websocket';
 
-// Try WebSocket connection first, fallback to HTTP if needed
-try {
-  console.log('Attempting WebSocket database connection...');
-  pool = new Pool({ 
-    connectionString: process.env.DATABASE_URL,
-    max: process.env.NODE_ENV === 'production' ? 5 : 10,
-    idleTimeoutMillis: 60000,
-    connectionTimeoutMillis: 15000,
-    allowExitOnIdle: false
-  });
+async function createDatabaseConnection() {
+  const dbUrl = process.env.DATABASE_URL!;
   
-  db = drizzle({ client: pool, schema });
-  console.log('WebSocket database connection established');
-  
-  // Test the connection
-  pool.connect()
-    .then(client => {
-      console.log('Database pool connection test successful');
-      client.release();
-    })
-    .catch(err => {
-      console.error('Database pool connection test failed, trying HTTP fallback:', err.message);
-      // Switch to HTTP connection
-      const sql = neon(process.env.DATABASE_URL!);
-      db = drizzleHttp(sql, { schema });
-      console.log('Switched to HTTP database connection');
+  try {
+    console.log('Attempting WebSocket database connection...');
+    pool = new Pool({ 
+      connectionString: dbUrl,
+      max: process.env.NODE_ENV === 'production' ? 3 : 8,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
+      allowExitOnIdle: false
     });
     
-} catch (error: any) {
-  console.error('WebSocket connection failed, using HTTP connection:', error.message);
-  const sql = neon(process.env.DATABASE_URL);
-  db = drizzleHttp(sql, { schema });
-  console.log('HTTP database connection established');
+    // Test the connection synchronously
+    const testClient = await pool.connect();
+    await testClient.query('SELECT 1');
+    testClient.release();
+    
+    db = drizzle({ client: pool, schema });
+    connectionType = 'websocket';
+    console.log('WebSocket database connection established and tested');
+    
+  } catch (error: any) {
+    console.error('WebSocket connection failed, switching to HTTP:', error.message);
+    
+    // Clean up failed pool
+    if (pool) {
+      try { await pool.end(); } catch {}
+      pool = null;
+    }
+    
+    // Use HTTP connection as fallback
+    const sql = neon(dbUrl);
+    db = drizzleHttp(sql, { schema });
+    connectionType = 'http';
+    console.log('HTTP database connection established');
+    
+    // Test HTTP connection
+    try {
+      await db.execute('SELECT 1');
+      console.log('HTTP database connection tested successfully');
+    } catch (httpError: any) {
+      console.error('HTTP database connection test failed:', httpError.message);
+      throw new Error('Both WebSocket and HTTP database connections failed');
+    }
+  }
 }
 
-export { db, pool };
+// Initialize connection
+createDatabaseConnection().catch(err => {
+  console.error('Critical: Database connection initialization failed:', err.message);
+  process.exit(1);
+});
+
+export { db, pool, connectionType };

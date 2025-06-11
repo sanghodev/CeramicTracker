@@ -28,7 +28,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customerCount: customers.length,
         responseTime: `${responseTime}ms`,
         timestamp: new Date().toISOString(),
-        environment: process.env.NODE_ENV || 'development'
+        environment: process.env.NODE_ENV || 'development',
+        connectionType: (await import('./db')).connectionType
       };
       
       console.log('Health check passed:', healthData);
