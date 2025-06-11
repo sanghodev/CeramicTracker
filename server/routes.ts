@@ -5,70 +5,39 @@ import { insertCustomerSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Enhanced health check endpoints
+  // Simplified health check
   app.get("/api/health", async (req, res) => {
-    const startTime = Date.now();
-    
     try {
-      console.log('Health check: Testing database connection...');
-      
-      // Test database connectivity with timeout
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Database timeout after 10s')), 10000)
-      );
-      
-      const customersPromise = storage.getCustomers();
-      const customers = await Promise.race([customersPromise, timeoutPromise]) as any[];
-      
-      const responseTime = Date.now() - startTime;
-      
-      const healthData = {
+      const customers = await storage.getCustomers();
+      res.json({
         status: 'healthy',
         database: 'connected',
         customerCount: customers.length,
-        responseTime: `${responseTime}ms`,
-        timestamp: new Date().toISOString(),
-        environment: process.env.NODE_ENV || 'development',
-        connectionType: (await import('./db')).connectionType
-      };
-      
-      console.log('Health check passed:', healthData);
-      res.json(healthData);
-      
-    } catch (error: any) {
-      const responseTime = Date.now() - startTime;
-      
-      const errorData = {
-        status: 'unhealthy',
-        database: 'disconnected',
-        error: error?.message || String(error),
-        responseTime: `${responseTime}ms`,
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
-      };
-      
-      console.error('Health check failed:', errorData);
-      res.status(500).json(errorData);
+      });
+    } catch (error: any) {
+      console.error('Health check failed:', error.message);
+      res.status(500).json({
+        status: 'unhealthy',
+        database: 'disconnected',
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
     }
   });
 
   // Detailed health check
   app.get("/api/health/detailed", async (req, res) => {
     try {
-      // Database connection test
-      const dbStart = Date.now();
       const customers = await storage.getCustomers();
-      const dbTime = Date.now() - dbStart;
-      
-      // Memory usage
       const memUsage = process.memoryUsage();
       
-      const detailedData = {
+      res.json({
         status: 'healthy',
         database: {
           status: 'connected',
-          customerCount: customers.length,
-          responseTime: `${dbTime}ms`
+          customerCount: customers.length
         },
         server: {
           uptime: `${Math.floor(process.uptime())}s`,
@@ -80,14 +49,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           nodeVersion: process.version
         },
         timestamp: new Date().toISOString()
-      };
-      
-      res.json(detailedData);
+      });
       
     } catch (error: any) {
       res.status(500).json({
         status: 'unhealthy',
-        error: error?.message || String(error),
+        error: error.message,
         timestamp: new Date().toISOString()
       });
     }

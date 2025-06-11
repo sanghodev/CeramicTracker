@@ -1,5 +1,5 @@
 import { customers, users, type Customer, type InsertCustomer, type User, type InsertUser } from "@shared/schema";
-import { getDb, dbInitPromise } from "./db";
+import { db } from "./db";
 import { eq, ilike, or, desc, asc, count } from "drizzle-orm";
 
 export interface IStorage {
@@ -45,19 +45,16 @@ function generateCustomerId(workDate: Date, programType?: string): string {
 export class DatabaseStorage implements IStorage {
   // User methods
   async getUser(id: number): Promise<User | undefined> {
-    const db = await getDb();
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const db = await getDb();
     const [user] = await db.select().from(users).where(eq(users.username, username));
     return user || undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const db = await getDb();
     const [user] = await db
       .insert(users)
       .values(insertUser)
@@ -67,7 +64,6 @@ export class DatabaseStorage implements IStorage {
 
   // Customer methods
   async getCustomer(id: number): Promise<Customer | undefined> {
-    const db = await getDb();
     const [customer] = await db.select().from(customers).where(eq(customers.id, id));
     return customer || undefined;
   }
@@ -75,7 +71,6 @@ export class DatabaseStorage implements IStorage {
   async getCustomers(): Promise<Customer[]> {
     try {
       console.log('Starting database query for customers...');
-      const db = await getDb();
       const customerList = await db.select().from(customers).orderBy(desc(customers.createdAt));
       console.log(`Successfully fetched ${customerList.length} customers from database`);
       return customerList;
@@ -91,7 +86,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   async searchCustomers(query: string): Promise<Customer[]> {
-    const db = await getDb();
     return await db.select().from(customers).where(
       or(
         ilike(customers.name, `%${query}%`),
@@ -103,7 +97,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCustomer(insertCustomer: InsertCustomer): Promise<Customer> {
-    const db = await getDb();
     // Generate unique customer ID
     const customerId = generateCustomerId(insertCustomer.workDate, insertCustomer.programType);
     
@@ -118,7 +111,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateCustomer(id: number, updates: Partial<InsertCustomer>): Promise<Customer | undefined> {
-    const db = await getDb();
     const [customer] = await db
       .update(customers)
       .set(updates)
@@ -128,7 +120,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateCustomerStatus(id: number, status: string): Promise<Customer | undefined> {
-    const db = await getDb();
     const [customer] = await db
       .update(customers)
       .set({ status })
