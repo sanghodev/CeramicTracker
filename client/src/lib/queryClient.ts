@@ -3,8 +3,13 @@ import { getApiBaseUrl } from "./environment";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    let text: string;
+    try {
+      text = await res.text();
+    } catch (e) {
+      text = res.statusText;
+    }
+    throw new Error(`${res.status}: ${text || res.statusText}`);
   }
 }
 
@@ -27,12 +32,10 @@ export async function apiRequest(
 
   console.log(`API Response: ${res.status} ${res.statusText}`);
   
-  if (!res.ok) {
-    const errorText = await res.text();
-    console.error(`API Error: ${res.status} - ${errorText}`);
-  }
-
-  await throwIfResNotOk(res);
+  // Clone response before checking status to avoid body stream issues
+  const resClone = res.clone();
+  
+  await throwIfResNotOk(resClone);
   return res;
 }
 
@@ -53,7 +56,16 @@ export const getQueryFn: <T>(options: {
       return null;
     }
 
-    await throwIfResNotOk(res);
+    if (!res.ok) {
+      let errorText = 'Unknown error';
+      try {
+        errorText = await res.text();
+      } catch (e) {
+        errorText = res.statusText;
+      }
+      throw new Error(`${res.status}: ${errorText}`);
+    }
+
     return await res.json();
   };
 

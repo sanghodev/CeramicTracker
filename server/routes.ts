@@ -93,21 +93,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all customers with cache headers for optimization
+  // Get all customers with enhanced error handling for deployment
   app.get("/api/customers", async (req, res) => {
     try {
-      // Set cache headers for client-side caching optimization
-      res.set('Cache-Control', 'public, max-age=300'); // 5 minute cache
-      res.set('Access-Control-Allow-Origin', '*');
-      res.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-      res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      console.log('API: Processing customers request');
+      
+      // Set proper headers for deployment
+      res.set('Content-Type', 'application/json');
+      res.set('Cache-Control', 'public, max-age=300');
       
       const customers = await storage.getCustomers();
-      console.log(`Fetched ${customers.length} customers from database`);
-      res.json(customers);
+      console.log(`API: Successfully fetched ${customers.length} customers`);
+      
+      // Ensure proper JSON response
+      res.status(200).json(customers);
     } catch (error: any) {
-      console.error("Error fetching customers:", error);
-      res.status(500).json({ message: "Failed to fetch customers", error: error?.message || String(error) });
+      console.error("API: Error fetching customers:", {
+        message: error.message,
+        stack: error.stack,
+        code: error.code
+      });
+      
+      res.status(500).json({ 
+        message: "Failed to fetch customers", 
+        error: error?.message || String(error),
+        timestamp: new Date().toISOString()
+      });
     }
   });
 

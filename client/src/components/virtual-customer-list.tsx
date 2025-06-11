@@ -25,10 +25,27 @@ export default function VirtualCustomerList({ onEdit }: VirtualCustomerListProps
     queryKey: ["/api/customers"],
     queryFn: async () => {
       console.log("Fetching customers from API...");
-      const response = await apiRequest("GET", "/api/customers");
-      const data = await response.json();
-      console.log("Customers received:", data.length);
-      return data;
+      try {
+        const response = await apiRequest("GET", "/api/customers");
+        
+        // Check if response is valid before parsing JSON
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          const text = await response.text();
+          throw new Error(`Expected JSON response, got: ${contentType}. Response: ${text.substring(0, 100)}`);
+        }
+        
+        const data = await response.json();
+        console.log("Customers received:", data.length);
+        return data;
+      } catch (error: any) {
+        console.error("Failed to fetch customers:", error);
+        throw new Error(`Customer data fetch failed: ${error.message}`);
+      }
     },
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000)
