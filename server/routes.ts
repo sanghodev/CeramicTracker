@@ -25,23 +25,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Get all customers
   app.get("/api/customers", async (req, res) => {
-    console.log('[CUSTOMERS API] Request received');
     try {
-      console.log('[CUSTOMERS API] Calling storage.getCustomers()');
       const customers = await storage.getCustomers();
-      console.log(`[CUSTOMERS API] Successfully fetched ${customers.length} customers`);
       res.json(customers);
     } catch (error: any) {
-      console.error('[CUSTOMERS API] Error details:', {
-        message: error.message,
-        stack: error.stack,
-        code: error.code,
-        name: error.name
-      });
+      console.error('Customer fetch error:', error.message);
       res.status(500).json({
         error: 'Failed to fetch customers',
-        message: error.message,
-        details: error.code || 'Unknown error'
+        message: error.message
       });
     }
   });

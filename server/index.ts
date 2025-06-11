@@ -72,20 +72,8 @@ app.use((req, res, next) => {
     process.exit(1);
   }
 
-  // Initialize database connection before registering routes
-  try {
-    console.log('[SERVER] Initializing database connection...');
-    const { db } = await import('./db');
-    await db.execute('SELECT 1 as test');
-    console.log('[SERVER] Database connection verified');
-  } catch (error: any) {
-    console.error('[SERVER] Database initialization failed:', {
-      message: error.message,
-      stack: error.stack,
-      code: error.code
-    });
-    // Continue anyway for health check endpoint
-  }
+  // Import database module to initialize connection
+  await import('./db');
 
   const server = await registerRoutes(app);
 

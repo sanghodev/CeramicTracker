@@ -60,20 +60,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCustomers(): Promise<Customer[]> {
-    console.log('[STORAGE] Starting getCustomers() call');
     try {
-      console.log('[STORAGE] Executing database query...');
       const customerList = await db.select().from(customers).orderBy(desc(customers.createdAt));
-      console.log(`[STORAGE] Query successful, found ${customerList.length} customers`);
       return customerList;
     } catch (error: any) {
-      console.error('[STORAGE] Database query failed:', {
-        message: error.message,
-        stack: error.stack,
-        code: error.code,
-        name: error.name
-      });
-      throw error;
+      console.error('Database query failed:', error.message);
+      throw new Error(`Database error: ${error.message}`);
     }
   }
 
