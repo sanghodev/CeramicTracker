@@ -51,9 +51,12 @@ export default function ImageSearch() {
         throw new Error("Camera not supported by this browser");
       }
 
-      // Try with environment camera first, fallback to any camera
+      // Show camera UI first
+      setCameraActive(true);
+
       let stream;
       try {
+        // Try with environment camera first, fallback to any camera
         stream = await navigator.mediaDevices.getUserMedia({ 
           video: { facingMode: 'environment' } 
         });
@@ -64,16 +67,35 @@ export default function ImageSearch() {
         });
       }
 
-      if (videoRef.current) {
+      if (videoRef.current && stream) {
         videoRef.current.srcObject = stream;
-        setCameraActive(true);
         
-        toast({
-          title: "Camera Started",
-          description: "Camera is now active. Position the image and tap capture.",
-        });
+        // Wait for video to load and then play
+        videoRef.current.onloadedmetadata = async () => {
+          try {
+            await videoRef.current?.play();
+            toast({
+              title: "Camera Started",
+              description: "Camera is now active. Position the image and tap capture.",
+            });
+          } catch (playError) {
+            console.error("Video play error:", playError);
+            // Try to play without waiting
+            videoRef.current?.play().catch(() => {
+              // Silent fail, camera might still work
+            });
+          }
+        };
+
+        // Also try to play immediately in case metadata is already loaded
+        try {
+          await videoRef.current.play();
+        } catch (immediatePlayError) {
+          // This is expected on some devices, onloadedmetadata will handle it
+        }
       }
     } catch (error) {
+      setCameraActive(false);
       console.error("Camera error:", error);
       
       let errorMessage = "Unable to access camera. ";
@@ -112,19 +134,51 @@ export default function ImageSearch() {
   };
 
   const capturePhoto = () => {
-    if (!videoRef.current || !canvasRef.current) return;
+    if (!videoRef.current || !canvasRef.current) {
+      toast({
+        title: "Camera Error",
+        description: "Camera not ready. Please try again.",
+        variant: "destructive"
+      });
+      return;
+    }
 
     const canvas = canvasRef.current;
     const video = videoRef.current;
+    
+    // Ensure video has dimensions
+    if (video.videoWidth === 0 || video.videoHeight === 0) {
+      toast({
+        title: "Camera Error", 
+        description: "Video not ready. Please wait a moment and try again.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      ctx.drawImage(video, 0, 0);
+      // Draw the current video frame to canvas
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      // Convert to base64 image data
       const imageData = canvas.toDataURL('image/jpeg', 0.8);
       setCapturedImage(imageData);
       stopCamera();
+      
+      toast({
+        title: "Photo Captured",
+        description: "Image captured successfully. Ready to search.",
+      });
+    } else {
+      toast({
+        title: "Camera Error",
+        description: "Unable to process photo. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -531,7 +585,9 @@ export default function ImageSearch() {
                     ref={videoRef}
                     autoPlay
                     playsInline
+                    muted
                     className="max-w-full h-64 rounded-lg border"
+                    style={{ minHeight: '256px' }}
                   />
                 </div>
               )}
