@@ -152,7 +152,7 @@ export default function ImageSearch() {
         if (customer.customerImage) {
           const similarity = await compareImages(capturedImage, customer.customerImage);
           console.log(`Customer ${customer.name} (customer image): ${(similarity * 100).toFixed(1)}% similarity`);
-          if (similarity > 0.15) { // Lowered threshold to 15%
+          if (similarity > 0.35) { // Raised threshold to 35% to filter out poor matches
             matches.push({
               customer,
               similarity,
@@ -165,7 +165,7 @@ export default function ImageSearch() {
         if (customer.workImage) {
           const similarity = await compareImages(capturedImage, customer.workImage);
           console.log(`Customer ${customer.name} (work image): ${(similarity * 100).toFixed(1)}% similarity`);
-          if (similarity > 0.15) { // Lowered threshold to 15%
+          if (similarity > 0.35) { // Raised threshold to 35% to filter out poor matches
             matches.push({
               customer,
               similarity,
@@ -175,9 +175,19 @@ export default function ImageSearch() {
         }
       }
 
-      // Sort by similarity (highest first)
-      matches.sort((a, b) => b.similarity - a.similarity);
-      setMatches(matches.slice(0, 10)); // Show top 10 matches
+      // Sort by similarity (highest first) - Perfect matches first, then high matches
+      matches.sort((a, b) => {
+        // Perfect matches (90%+) come first
+        const aPerfect = a.similarity >= 0.9;
+        const bPerfect = b.similarity >= 0.9;
+        if (aPerfect && !bPerfect) return -1;
+        if (!aPerfect && bPerfect) return 1;
+        
+        // Then sort by similarity within each group
+        return b.similarity - a.similarity;
+      });
+      
+      setMatches(matches.slice(0, 15)); // Show top 15 matches
       
       toast({
         title: "Search Complete",
@@ -258,13 +268,11 @@ export default function ImageSearch() {
         });
         
         // Weighted combination of different similarities
-        const combinedSimilarity = Math.max(
-          histogramSimilarity * 0.3 +
-          structuralSimilarity * 0.3 +
-          colorSimilarity * 0.2 +
-          pixelSimilarity * 0.2,
-          // Use best individual score if combined is low
-          Math.max(histogramSimilarity, structuralSimilarity, colorSimilarity, pixelSimilarity) * 0.7
+        const combinedSimilarity = (
+          histogramSimilarity * 0.25 +
+          Math.max(0, structuralSimilarity) * 0.15 + // Ignore negative structural scores
+          colorSimilarity * 0.35 +
+          pixelSimilarity * 0.25
         );
         
         resolve(Math.max(0, Math.min(1, combinedSimilarity)));
@@ -419,6 +427,13 @@ export default function ImageSearch() {
       "completed": "Completed"
     };
     return statusMap[status] || status;
+  };
+
+  const getMatchBadgeVariant = (similarity: number): "default" | "secondary" | "destructive" | "outline" => {
+    if (similarity >= 0.9) return 'default'; // Perfect match - green
+    if (similarity >= 0.7) return 'secondary'; // Good match - blue
+    if (similarity >= 0.5) return 'outline'; // Fair match - gray
+    return 'destructive'; // Poor match - red
   };
 
   const resetSearch = () => {
@@ -594,7 +609,7 @@ export default function ImageSearch() {
                           <Badge variant={getStatusBadge(match.customer.status)}>
                             {getStatusText(match.customer.status)}
                           </Badge>
-                          <Badge variant="secondary">
+                          <Badge variant={getMatchBadgeVariant(match.similarity)}>
                             {Math.round(match.similarity * 100)}% Match
                           </Badge>
                           <Badge variant="outline">
