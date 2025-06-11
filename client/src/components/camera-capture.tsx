@@ -177,9 +177,9 @@ export default function CameraCapture({ onDataExtracted }: CameraCaptureProps) {
             <div className="flex items-center justify-center space-x-3">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
               <span className="text-primary font-medium">
-                {progress < 30 ? "이미지 업로드 중..." : 
-                 progress < 50 ? "텍스트 분석 준비..." : 
-                 progress < 80 ? "자동 텍스트 인식 중..." : "정보 추출 완료 중..."}
+                {progress < 30 ? "Uploading image..." : 
+                 progress < 50 ? "Preparing text analysis..." : 
+                 progress < 80 ? "Processing OCR..." : "Extracting information..."}
               </span>
             </div>
             <div className="mt-2 bg-blue-200 rounded-full h-2">

@@ -151,7 +151,7 @@ export default function ImageSearch() {
         // Check customer image
         if (customer.customerImage) {
           const similarity = await compareImages(capturedImage, customer.customerImage);
-          console.log(`Customer ${customer.name} (customer image): ${(similarity * 100).toFixed(1)}% similarity`);
+
           if (similarity > 0.35) { // Raised threshold to 35% to filter out poor matches
             matches.push({
               customer,
@@ -164,7 +164,7 @@ export default function ImageSearch() {
         // Check work image
         if (customer.workImage) {
           const similarity = await compareImages(capturedImage, customer.workImage);
-          console.log(`Customer ${customer.name} (work image): ${(similarity * 100).toFixed(1)}% similarity`);
+
           if (similarity > 0.35) { // Raised threshold to 35% to filter out poor matches
             matches.push({
               customer,
@@ -259,13 +259,7 @@ export default function ImageSearch() {
         const colorSimilarity = compareColorDistribution(data1, data2);
         const pixelSimilarity = comparePixels(data1, data2);
         
-        // Debug logging
-        console.log('Similarity scores:', {
-          histogram: histogramSimilarity.toFixed(3),
-          structural: structuralSimilarity.toFixed(3),
-          color: colorSimilarity.toFixed(3),
-          pixel: pixelSimilarity.toFixed(3)
-        });
+
         
         // Weighted combination of different similarities
         const combinedSimilarity = (

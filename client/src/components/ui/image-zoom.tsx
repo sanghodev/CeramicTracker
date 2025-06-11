@@ -240,7 +240,7 @@ export function ImageZoom({ src, alt, className = "", thumbnailClassName = "w-20
                   onClick={handleReset}
                   className="p-2 hover:bg-slate-200 rounded-full transition-colors"
                   type="button"
-                  title="원본 크기"
+                  title="Original Size"
                 >
                   <RotateCcw className="h-4 w-4" />
                 </button>

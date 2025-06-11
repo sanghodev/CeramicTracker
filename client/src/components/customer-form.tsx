@@ -105,11 +105,7 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
       submissionData.groupId = "";
     }
     
-    console.log("Submitting customer data:", {
-      ...submissionData,
-      customerImage: submissionData.customerImage ? "IMAGE_DATA_PRESENT" : "NO_IMAGE",
-      workImage: submissionData.workImage ? "IMAGE_DATA_PRESENT" : "NO_IMAGE"
-    });
+
     createCustomerMutation.mutate(submissionData);
   };
 
@@ -178,7 +174,7 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
       }
       
       if (initialData.customerImage) {
-        console.log("Setting customer image preview");
+
         setCustomerImagePreview(initialData.customerImage);
         form.setValue("customerImage", initialData.customerImage);
       }
