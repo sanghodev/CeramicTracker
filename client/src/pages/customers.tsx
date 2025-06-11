@@ -9,6 +9,7 @@ import { ImageZoom } from "@/components/ui/image-zoom";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatPhoneNumber, isValidEmail, getSuggestedDates } from "@/lib/ocr";
+import { formatWorkDate, formatRegistrationDate, formatGroupId, formatDateForInput } from "@/lib/date-utils";
 import type { Customer } from "@shared/schema";
 
 import { ProfileSummaryButton, QuickSummaryBadge } from "@/components/profile-summary";
@@ -110,7 +111,7 @@ export default function Customers() {
       name: customer.name,
       phone: customer.phone,
       email: customer.email || "",
-      workDate: typeof customer.workDate === 'string' ? customer.workDate : customer.workDate.toISOString().split('T')[0],
+      workDate: formatDateForInput(customer.workDate),
       status: customer.status,
       programType: customer.programType || "painting",
       contactStatus: customer.contactStatus || "not_contacted",
@@ -229,14 +230,14 @@ export default function Customers() {
         `"${customer.name}"`,
         `"${customer.phone}"`,
         `"${customer.email || ""}"`,
-        `"${new Date(customer.workDate).toLocaleDateString()}"`,
+        `"${formatWorkDate(customer.workDate)}"`,
         `"${getStatusText(customer.status)}"`,
         `"${getProgramTypeText(customer.programType || "painting")}"`,
         `"${customer.contactStatus?.replace('_', ' ') || "Not Contacted"}"`,
         `"${customer.storageLocation || ""}"`,
         `"${customer.pickupStatus?.replace('_', ' ') || "Not Picked Up"}"`,
         `"${customer.notes || ""}"`,
-        `"${new Date(customer.createdAt).toLocaleDateString()}"`
+        `"${formatRegistrationDate(customer.createdAt)}"`
       ].join(","))
     ].join("\n");
 
@@ -640,10 +641,10 @@ export default function Customers() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-slate-600">
                               <div>📞 {customer.phone}</div>
                               <div>📧 {customer.email || "No email"}</div>
-                              <div>📅 {typeof customer.workDate === 'string' ? customer.workDate : new Date(customer.workDate).toLocaleDateString('en-US')}</div>
-                              <div>🕒 Registered: {typeof customer.createdAt === 'string' ? new Date(customer.createdAt).toLocaleDateString('en-US') : customer.createdAt.toLocaleDateString('en-US')}</div>
+                              <div>📅 Work Date: {formatWorkDate(customer.workDate)}</div>
+                              <div>🕒 Registered: {formatRegistrationDate(customer.createdAt)}</div>
                               {customer.isGroup === "true" && customer.groupId && (
-                                <div className="col-span-full">🏷️ Group ID: {customer.groupId}</div>
+                                <div className="col-span-full">🏷️ Group: {formatGroupId(customer.groupId)}</div>
                               )}
                             </div>
                             
