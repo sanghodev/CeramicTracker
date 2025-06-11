@@ -30,9 +30,12 @@ export function isValidEmail(email: string): boolean {
   return emailRegex.test(email);
 }
 
-// Get suggested dates (today, tomorrow, common pottery class days)
+// Get suggested dates (today, tomorrow, common pottery class days) in Eastern Time
 export function getSuggestedDates(): { label: string; value: string }[] {
-  const today = new Date();
+  // Get current date in Eastern Time
+  const easternTime = new Date().toLocaleString("en-US", {timeZone: "America/New_York"});
+  const today = new Date(easternTime);
+  
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
   

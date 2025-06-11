@@ -17,11 +17,14 @@ export interface IStorage {
   updateCustomerStatus(id: number, status: string): Promise<Customer | undefined>;
 }
 
-// Helper function to generate unique customer ID
+// Helper function to generate unique customer ID using Eastern Time
 function generateCustomerId(workDate: Date, programType?: string): string {
-  const year = workDate.getFullYear().toString().slice(-2);
-  const month = (workDate.getMonth() + 1).toString().padStart(2, '0');
-  const day = workDate.getDate().toString().padStart(2, '0');
+  // Convert to Eastern Time
+  const easternDate = new Date(workDate.toLocaleString("en-US", {timeZone: "America/New_York"}));
+  
+  const year = easternDate.getFullYear().toString().slice(-2);
+  const month = (easternDate.getMonth() + 1).toString().padStart(2, '0');
+  const day = easternDate.getDate().toString().padStart(2, '0');
   
   // Program type codes
   const programCodes: Record<string, string> = {

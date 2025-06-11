@@ -85,11 +85,6 @@ export default function Customers() {
   });
 
   // Filter customers by search query and date
-  console.log("Raw customers data:", customers);
-  console.log("Is loading:", isLoading);
-  console.log("Search query:", searchQuery);
-  console.log("Search date:", searchDate);
-
   const filteredCustomers = customers.filter((customer: Customer) => {
     const matchesQuery = !searchQuery.trim() || 
       customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -97,13 +92,12 @@ export default function Customers() {
       (customer.email && customer.email.toLowerCase().includes(searchQuery.toLowerCase()));
     
     const matchesDate = !searchDate || 
-      new Date(customer.workDate).toISOString().split('T')[0] === searchDate;
+      formatDateForInput(customer.workDate) === searchDate;
     
     return matchesQuery && matchesDate;
   });
 
   const displayedCustomers = filteredCustomers;
-  console.log("Filtered customers:", filteredCustomers.length);
 
   const startEdit = (customer: Customer) => {
     setEditingCustomer(customer);
