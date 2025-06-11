@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Search, Edit2, Save, X, Users, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -33,12 +33,17 @@ export default function Customers() {
   });
   const [exportDateRange, setExportDateRange] = useState("all");
 
-  const { data: customers = [], isLoading } = useQuery({
+  const { data: customers = [], isLoading, refetch } = useQuery({
     queryKey: ["/api/customers"],
     queryFn: async () => {
+      console.log("Fetching customers from API...");
       const response = await apiRequest("GET", "/api/customers");
-      return response.json();
-    }
+      const data = await response.json();
+      console.log("Customers fetched:", data.length, "customers");
+      return data;
+    },
+    staleTime: 0,
+    gcTime: 0
   });
 
   const { data: searchResults = [], isLoading: isSearching } = useQuery({
@@ -74,6 +79,11 @@ export default function Customers() {
   });
 
   // Filter customers by search query and date
+  console.log("Raw customers data:", customers);
+  console.log("Is loading:", isLoading);
+  console.log("Search query:", searchQuery);
+  console.log("Search date:", searchDate);
+
   const filteredCustomers = customers.filter((customer: Customer) => {
     const matchesQuery = !searchQuery.trim() || 
       customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -87,6 +97,7 @@ export default function Customers() {
   });
 
   const displayedCustomers = filteredCustomers;
+  console.log("Filtered customers:", filteredCustomers.length);
 
   const startEdit = (customer: Customer) => {
     setEditingCustomer(customer);
