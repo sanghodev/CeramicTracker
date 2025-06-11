@@ -100,25 +100,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Set proper headers for deployment
       res.set('Content-Type', 'application/json');
-      res.set('Cache-Control', 'public, max-age=300');
+      res.set('Cache-Control', 'no-cache'); // Disable cache for debugging
+      
+      // Add timeout protection
+      const timeout = setTimeout(() => {
+        if (!res.headersSent) {
+          console.error('API: Request timeout after 30 seconds');
+          res.status(500).json({ 
+            message: "Request timeout", 
+            error: "Database operation took too long",
+            timestamp: new Date().toISOString()
+          });
+        }
+      }, 30000);
       
       const customers = await storage.getCustomers();
+      clearTimeout(timeout);
+      
+      if (res.headersSent) {
+        console.warn('API: Headers already sent, cannot respond');
+        return;
+      }
+      
       console.log(`API: Successfully fetched ${customers.length} customers`);
       
-      // Ensure proper JSON response
+      // Validate data before sending
+      if (!Array.isArray(customers)) {
+        throw new Error('Invalid data format: expected array');
+      }
+      
       res.status(200).json(customers);
     } catch (error: any) {
       console.error("API: Error fetching customers:", {
         message: error.message,
-        stack: error.stack,
-        code: error.code
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+        code: error.code,
+        name: error.name
       });
       
-      res.status(500).json({ 
-        message: "Failed to fetch customers", 
-        error: error?.message || String(error),
-        timestamp: new Date().toISOString()
-      });
+      if (!res.headersSent) {
+        res.status(500).json({ 
+          message: "Failed to fetch customers", 
+          error: error?.message || String(error),
+          timestamp: new Date().toISOString(),
+          environment: process.env.NODE_ENV || 'unknown'
+        });
+      }
     }
   });
 
