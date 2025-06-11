@@ -1,12 +1,8 @@
 // Environment detection and API configuration
 export function getApiBaseUrl(): string {
-  // In production (deployed), use relative URLs
-  if (import.meta.env.PROD) {
-    return '';
-  }
-  
-  // In development, use localhost
-  return 'http://localhost:5000';
+  // Always use relative URLs for both development and production
+  // The Vite dev server proxies to the backend automatically
+  return '';
 }
 
 export function isDeployedEnvironment(): boolean {

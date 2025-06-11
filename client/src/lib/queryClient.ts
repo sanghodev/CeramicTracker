@@ -13,9 +13,8 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  // Build complete API URL for both development and production
-  const baseUrl = getApiBaseUrl();
-  const apiUrl = url.startsWith('/') ? `${baseUrl}${url}` : `${baseUrl}/${url}`;
+  // Use relative URLs - Vite dev server handles proxying automatically
+  const apiUrl = url.startsWith('/') ? url : `/${url}`;
   
   console.log(`API Request: ${method} ${apiUrl}`);
   
@@ -43,11 +42,10 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const baseUrl = getApiBaseUrl();
     const url = queryKey[0] as string;
-    const fullUrl = url.startsWith('/') ? `${baseUrl}${url}` : `${baseUrl}/${url}`;
+    const apiUrl = url.startsWith('/') ? url : `/${url}`;
     
-    const res = await fetch(fullUrl, {
+    const res = await fetch(apiUrl, {
       credentials: "include",
     });
 
