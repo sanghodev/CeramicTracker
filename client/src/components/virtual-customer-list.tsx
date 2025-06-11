@@ -21,13 +21,23 @@ export default function VirtualCustomerList({ onEdit }: VirtualCustomerListProps
   const [searchQuery, setSearchQuery] = useState("");
   const [searchDate, setSearchDate] = useState("");
 
-  const { data: customers = [], isLoading } = useQuery({
+  const { data: customers = [], isLoading, error } = useQuery({
     queryKey: ["/api/customers"],
     queryFn: async () => {
+      console.log("Fetching customers from API...");
       const response = await apiRequest("GET", "/api/customers");
-      return response.json();
-    }
+      const data = await response.json();
+      console.log("Customers received:", data.length);
+      return data;
+    },
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000)
   });
+
+  // Log error if data fetch fails
+  if (error) {
+    console.error("Failed to fetch customers:", error);
+  }
 
   // 필터링된 고객 목록 (메모이제이션으로 성능 최적화)
   const filteredCustomers = useMemo(() => {
@@ -135,6 +145,24 @@ export default function VirtualCustomerList({ onEdit }: VirtualCustomerListProps
     );
   }, [filteredCustomers, onEdit]);
 
+  if (error) {
+    return (
+      <div className="text-center py-8">
+        <div className="text-red-600 mb-4">
+          <p className="font-medium">Failed to load customer data</p>
+          <p className="text-sm mt-2">Error: {String(error)}</p>
+        </div>
+        <Button 
+          onClick={() => window.location.reload()} 
+          variant="outline"
+          className="mt-4"
+        >
+          Reload Page
+        </Button>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="space-y-3">
@@ -162,7 +190,7 @@ export default function VirtualCustomerList({ onEdit }: VirtualCustomerListProps
 
   return (
     <div className="space-y-4">
-      {/* 검색 및 필터 */}
+      {/* Search and filter */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
@@ -182,9 +210,12 @@ export default function VirtualCustomerList({ onEdit }: VirtualCustomerListProps
         />
       </div>
 
-      {/* Result count */}
-      <div className="text-sm text-slate-600">
-        Total {filteredCustomers.length} customers
+      {/* Result count and debug info */}
+      <div className="text-sm text-slate-600 flex justify-between">
+        <span>Total {filteredCustomers.length} customers</span>
+        <span className="text-xs text-slate-400">
+          Loaded: {customers.length} | API Status: {isLoading ? 'Loading...' : error ? 'Error' : 'Ready'}
+        </span>
       </div>
 
       {/* Virtual scroll list */}
