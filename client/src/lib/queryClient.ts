@@ -12,12 +12,24 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const res = await fetch(url, {
+  // Ensure proper URL formatting for deployment
+  const apiUrl = url.startsWith('/') ? url : `/${url}`;
+  
+  console.log(`API Request: ${method} ${apiUrl}`);
+  
+  const res = await fetch(apiUrl, {
     method,
     headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
+
+  console.log(`API Response: ${res.status} ${res.statusText}`);
+  
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error(`API Error: ${res.status} - ${errorText}`);
+  }
 
   await throwIfResNotOk(res);
   return res;
