@@ -152,13 +152,38 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
 
   const startWorkCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } 
-      });
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("Camera not supported by this browser");
+      }
+
+      let stream;
+      try {
+        // Try with environment camera first for mobile
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            facingMode: 'environment',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          } 
+        });
+      } catch (envError) {
+        // Fallback to any available camera
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          } 
+        });
+      }
       
       if (workVideoRef.current) {
         workVideoRef.current.srcObject = stream;
         setShowWorkCamera(true);
+        
+        // Ensure video plays on mobile
+        workVideoRef.current.onloadedmetadata = () => {
+          workVideoRef.current?.play().catch(console.error);
+        };
         
         toast({
           title: "Camera Started",
@@ -166,19 +191,26 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
         });
       }
     } catch (error) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        if (workVideoRef.current) {
-          workVideoRef.current.srcObject = stream;
-          setShowWorkCamera(true);
+      console.error("Camera error:", error);
+      
+      let errorMessage = "Unable to access camera. ";
+      if (error instanceof DOMException) {
+        if (error.name === 'NotAllowedError') {
+          errorMessage += "Please allow camera permissions and try again.";
+        } else if (error.name === 'NotFoundError') {
+          errorMessage += "No camera found on this device.";
+        } else {
+          errorMessage += "Please check permissions and try again.";
         }
-      } catch (fallbackError) {
-        toast({
-          title: "Camera Access Failed",
-          description: "Please allow camera permissions or use the upload option.",
-          variant: "destructive"
-        });
+      } else {
+        errorMessage += "Please use the upload option instead.";
       }
+      
+      toast({
+        title: "Camera Access Failed",
+        description: errorMessage,
+        variant: "destructive"
+      });
     }
   };
 
@@ -536,26 +568,29 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
                               ref={workVideoRef}
                               autoPlay
                               playsInline
+                              muted
                               className="w-full h-64 object-cover"
+                              style={{ minHeight: '256px' }}
                             />
                             <canvas ref={workCanvasRef} className="hidden" />
                             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-3">
-                              <Button
+                              <button
                                 type="button"
                                 onClick={() => captureWorkPhoto(field)}
-                                className="bg-white text-black hover:bg-gray-100 rounded-full w-16 h-16 flex items-center justify-center"
+                                className="bg-white text-black hover:bg-gray-100 rounded-full w-16 h-16 flex items-center justify-center border-0 shadow-lg"
+                                style={{ WebkitTapHighlightColor: 'transparent' }}
                               >
                                 <Camera className="h-6 w-6" />
-                              </Button>
-                              <Button
+                              </button>
+                              <button
                                 type="button"
-                                variant="outline"
                                 onClick={stopWorkCamera}
-                                className="bg-white text-black hover:bg-gray-100"
+                                className="bg-white text-black hover:bg-gray-100 px-4 py-2 rounded-lg border-0 shadow-lg flex items-center gap-2"
+                                style={{ WebkitTapHighlightColor: 'transparent' }}
                               >
-                                <X className="h-4 w-4 mr-1" />
+                                <X className="h-4 w-4" />
                                 Cancel
-                              </Button>
+                              </button>
                             </div>
                           </div>
                         )}

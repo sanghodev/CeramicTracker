@@ -180,9 +180,14 @@ function parseExtractedText(text: string): ExtractedData {
     if (/^name\s*:?\s*/i.test(cleanLine)) {
       const nameMatch = cleanLine.match(/^name\s*:?\s*(.+)/i);
       if (nameMatch && nameMatch[1]) {
-        const potentialName = nameMatch[1].trim();
+        let potentialName = nameMatch[1].trim();
+        
+        // Remove common OCR artifacts and labels
+        potentialName = potentialName.replace(/^(name|名前|이름)\s*:?\s*/i, '').trim();
+        
         // Validate it looks like a name (letters and spaces, reasonable length)
-        if (/^[a-zA-Z\s]{2,50}$/.test(potentialName)) {
+        // Also exclude single words that might be labels
+        if (/^[a-zA-Z\s]{2,50}$/.test(potentialName) && potentialName.split(' ').length >= 1 && potentialName.toLowerCase() !== 'name') {
           data.name = potentialName;
           console.log('Found name:', data.name);
         }
