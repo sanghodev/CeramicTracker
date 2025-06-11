@@ -1,6 +1,6 @@
 import { customers, users, type Customer, type InsertCustomer, type User, type InsertUser } from "@shared/schema";
 import { db } from "./db";
-import { eq, ilike, or, desc } from "drizzle-orm";
+import { eq, ilike, or, desc, asc, count } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -11,6 +11,12 @@ export interface IStorage {
   // Customer methods
   getCustomer(id: number): Promise<Customer | undefined>;
   getCustomers(): Promise<Customer[]>;
+  getCustomersWithPagination(page: number, limit: number, sortBy?: string, sortOrder?: string): Promise<{
+    customers: Customer[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }>;
   searchCustomers(query: string): Promise<Customer[]>;
   createCustomer(customer: InsertCustomer): Promise<Customer>;
   updateCustomer(id: number, updates: Partial<InsertCustomer>): Promise<Customer | undefined>;

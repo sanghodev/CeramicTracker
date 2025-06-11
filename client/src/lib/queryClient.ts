@@ -47,11 +47,14 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: 0,
-      retry: false,
+      staleTime: 5 * 60 * 1000, // 5분간 캐시 유지 (데이터베이스 호출 최소화)
+      gcTime: 10 * 60 * 1000, // 10분간 메모리에 보관 (TanStack Query v5)
+      retry: 1, // 실패시 1회 재시도
+      retryDelay: 1000, // 1초 대기 후 재시도
     },
     mutations: {
-      retry: false,
+      retry: 1,
+      retryDelay: 1000,
     },
   },
 });

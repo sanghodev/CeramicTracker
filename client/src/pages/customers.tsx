@@ -34,23 +34,14 @@ export default function Customers() {
   });
   const [exportDateRange, setExportDateRange] = useState("all");
 
-  const { data: customers = [], isLoading, refetch } = useQuery({
+  const { data: customers = [], isLoading } = useQuery({
     queryKey: ["/api/customers"],
     queryFn: async () => {
-      console.log("Fetching customers from API...");
       const response = await apiRequest("GET", "/api/customers");
-      const data = await response.json();
-      console.log("Customers fetched:", data.length, "customers");
-      return data;
-    },
-    staleTime: 0
+      return response.json();
+    }
+    // 기본 캐시 설정 사용 (5분 캐시로 데이터베이스 호출 최소화)
   });
-
-  // Clear any stale cache and force fresh data fetch
-  useEffect(() => {
-    queryClient.removeQueries({ queryKey: ["/api/customers"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
-  }, []);
 
   const { data: searchResults = [], isLoading: isSearching } = useQuery({
     queryKey: ["/api/customers/search", searchQuery],

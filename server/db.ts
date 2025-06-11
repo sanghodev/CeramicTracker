@@ -11,5 +11,12 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+// 데이터베이스 연결 최적화
+export const pool = new Pool({ 
+  connectionString: process.env.DATABASE_URL,
+  max: 10, // 최대 연결 수 제한
+  idleTimeoutMillis: 30000, // 30초 후 유휴 연결 해제
+  connectionTimeoutMillis: 5000, // 5초 연결 타임아웃
+});
+
 export const db = drizzle({ client: pool, schema });

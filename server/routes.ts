@@ -5,10 +5,15 @@ import { insertCustomerSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Get all customers
+  // Get customers with pagination and optimization
   app.get("/api/customers", async (req, res) => {
     try {
-      const customers = await storage.getCustomers();
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 50; // 한 번에 50개씩 로드
+      const sortBy = req.query.sortBy as string || 'workDate';
+      const sortOrder = req.query.sortOrder as string || 'desc';
+      
+      const customers = await storage.getCustomersWithPagination(page, limit, sortBy, sortOrder);
       res.json(customers);
     } catch (error) {
       console.error("Error fetching customers:", error);
