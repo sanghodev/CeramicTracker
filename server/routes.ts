@@ -5,17 +5,42 @@ import { insertCustomerSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Health check endpoint
+  app.get("/api/health", async (req, res) => {
+    try {
+      // Test database connection
+      const customers = await storage.getCustomers();
+      res.json({ 
+        status: "healthy", 
+        database: "connected",
+        customerCount: customers.length,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      res.status(500).json({ 
+        status: "unhealthy", 
+        database: "disconnected",
+        error: error?.message || String(error),
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
   // Get all customers with cache headers for optimization
   app.get("/api/customers", async (req, res) => {
     try {
-      // 캐시 헤더 설정으로 클라이언트 측 캐싱 최적화
-      res.set('Cache-Control', 'public, max-age=300'); // 5분 캐시
+      // Set cache headers for client-side caching optimization
+      res.set('Cache-Control', 'public, max-age=300'); // 5 minute cache
+      res.set('Access-Control-Allow-Origin', '*');
+      res.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+      res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
       
       const customers = await storage.getCustomers();
+      console.log(`Fetched ${customers.length} customers from database`);
       res.json(customers);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching customers:", error);
-      res.status(500).json({ message: "Failed to fetch customers" });
+      res.status(500).json({ message: "Failed to fetch customers", error: error?.message || String(error) });
     }
   });
 
