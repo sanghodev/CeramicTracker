@@ -207,7 +207,22 @@ export default function ImageSearch() {
       
       let loadedCount = 0;
       
-
+      // Simple pixel-based comparison
+      const comparePixels = (data1: Uint8ClampedArray, data2: Uint8ClampedArray): number => {
+        let totalDifference = 0;
+        const totalPixels = data1.length / 4;
+        
+        for (let i = 0; i < data1.length; i += 4) {
+          const rDiff = Math.abs(data1[i] - data2[i]);
+          const gDiff = Math.abs(data1[i + 1] - data2[i + 1]);
+          const bDiff = Math.abs(data1[i + 2] - data2[i + 2]);
+          const pixelDiff = (rDiff + gDiff + bDiff) / 3;
+          totalDifference += pixelDiff;
+        }
+        
+        const averageDifference = totalDifference / totalPixels;
+        return Math.max(0, 1 - (averageDifference / 255));
+      };
 
       const processImages = () => {
         if (loadedCount < 2) return;
