@@ -46,17 +46,57 @@ export default function ImageSearch() {
 
   const startCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } 
-      });
+      // Check if getUserMedia is supported
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("Camera not supported by this browser");
+      }
+
+      // Try with environment camera first, fallback to any camera
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: 'environment' } 
+        });
+      } catch (envError) {
+        // Fallback to any available camera
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          video: true 
+        });
+      }
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         setCameraActive(true);
+        
+        toast({
+          title: "Camera Started",
+          description: "Camera is now active. Position the image and tap capture.",
+        });
       }
     } catch (error) {
+      console.error("Camera error:", error);
+      
+      let errorMessage = "Unable to access camera. ";
+      
+      if (error instanceof DOMException) {
+        if (error.name === 'NotAllowedError') {
+          errorMessage += "Please allow camera permissions in your browser settings and try again.";
+        } else if (error.name === 'NotFoundError') {
+          errorMessage += "No camera device found on this device.";
+        } else if (error.name === 'NotSupportedError') {
+          errorMessage += "Camera not supported by this browser. Try using a different browser.";
+        } else {
+          errorMessage += "Please check permissions and try again, or use the upload option.";
+        }
+      } else if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+        errorMessage += "Camera requires HTTPS. Please use the upload option instead.";
+      } else {
+        errorMessage += "Please check permissions and try again, or use the upload option.";
+      }
+      
       toast({
-        title: "Camera Error",
-        description: "Unable to access camera. Please check permissions.",
+        title: "Camera Access Failed",
+        description: errorMessage,
         variant: "destructive"
       });
     }
@@ -271,40 +311,57 @@ export default function ImageSearch() {
           <CardContent>
             <div className="space-y-4">
               {/* Camera Controls */}
-              <div className="flex flex-wrap gap-2">
-                {!cameraActive && !capturedImage && (
-                  <Button onClick={startCamera} className="flex items-center gap-2">
-                    <Camera className="h-4 w-4" />
-                    Start Camera
-                  </Button>
-                )}
-                
-                {cameraActive && (
-                  <>
-                    <Button onClick={capturePhoto} className="flex items-center gap-2">
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  {!cameraActive && !capturedImage && (
+                    <Button onClick={startCamera} className="flex items-center gap-2">
                       <Camera className="h-4 w-4" />
-                      Capture Photo
+                      Start Camera
                     </Button>
-                    <Button onClick={stopCamera} variant="outline">
-                      Stop Camera
-                    </Button>
-                  </>
-                )}
-                
-                <Button 
-                  onClick={() => fileInputRef.current?.click()} 
-                  variant="outline"
-                  className="flex items-center gap-2"
-                >
-                  <Search className="h-4 w-4" />
-                  Upload Image
-                </Button>
-                
-                {capturedImage && (
-                  <Button onClick={resetSearch} variant="outline">
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Reset
+                  )}
+                  
+                  {cameraActive && (
+                    <>
+                      <Button onClick={capturePhoto} className="flex items-center gap-2">
+                        <Camera className="h-4 w-4" />
+                        Capture Photo
+                      </Button>
+                      <Button onClick={stopCamera} variant="outline">
+                        Stop Camera
+                      </Button>
+                    </>
+                  )}
+                  
+                  <Button 
+                    onClick={() => fileInputRef.current?.click()} 
+                    variant={!cameraActive ? "default" : "outline"}
+                    className="flex items-center gap-2"
+                  >
+                    <Search className="h-4 w-4" />
+                    Upload Image
                   </Button>
+                  
+                  {capturedImage && (
+                    <Button onClick={resetSearch} variant="outline">
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Reset
+                    </Button>
+                  )}
+                </div>
+
+                {/* Camera Permission Help */}
+                {!cameraActive && !capturedImage && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="text-sm text-blue-800">
+                      <p className="font-medium mb-2">Camera Access Tips:</p>
+                      <ul className="space-y-1 text-xs">
+                        <li>• Click "Allow" when prompted for camera permissions</li>
+                        <li>• For Chrome: Click the camera icon in the address bar to enable</li>
+                        <li>• For Safari: Go to Settings → Privacy → Camera → Allow for this site</li>
+                        <li>• If camera fails, use "Upload Image" to select photos from your device</li>
+                      </ul>
+                    </div>
+                  </div>
                 )}
               </div>
 
