@@ -5,7 +5,7 @@ import { insertCustomerSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Simplified health check
+  // Health check
   app.get("/api/health", async (req, res) => {
     try {
       const customers = await storage.getCustomers();
@@ -13,160 +13,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: 'healthy',
         database: 'connected',
         customerCount: customers.length,
-        timestamp: new Date().toISOString(),
-        environment: process.env.NODE_ENV || 'development'
+        timestamp: new Date().toISOString()
       });
     } catch (error: any) {
-      console.error('Health check failed:', error.message);
       res.status(500).json({
         status: 'unhealthy',
-        database: 'disconnected',
-        error: error.message,
-        timestamp: new Date().toISOString()
+        error: error.message
       });
     }
   });
 
-  // Detailed health check
-  app.get("/api/health/detailed", async (req, res) => {
-    try {
-      const customers = await storage.getCustomers();
-      const memUsage = process.memoryUsage();
-      
-      res.json({
-        status: 'healthy',
-        database: {
-          status: 'connected',
-          customerCount: customers.length
-        },
-        server: {
-          uptime: `${Math.floor(process.uptime())}s`,
-          memory: {
-            used: `${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`,
-            total: `${Math.round(memUsage.heapTotal / 1024 / 1024)}MB`
-          },
-          environment: process.env.NODE_ENV || 'development',
-          nodeVersion: process.version
-        },
-        timestamp: new Date().toISOString()
-      });
-      
-    } catch (error: any) {
-      res.status(500).json({
-        status: 'unhealthy',
-        error: error.message,
-        timestamp: new Date().toISOString()
-      });
-    }
-  });
-
-  // Get all customers with enhanced error handling for deployment
+  // Get all customers
   app.get("/api/customers", async (req, res) => {
     try {
-      console.log('API: Processing customers request');
-      
-      // Set proper headers for deployment
-      res.set('Content-Type', 'application/json');
-      res.set('Cache-Control', 'no-cache'); // Disable cache for debugging
-      
-      // Add timeout protection
-      const timeout = setTimeout(() => {
-        if (!res.headersSent) {
-          console.error('API: Request timeout after 30 seconds');
-          res.status(500).json({ 
-            message: "Request timeout", 
-            error: "Database operation took too long",
-            timestamp: new Date().toISOString()
-          });
-        }
-      }, 30000);
-      
       const customers = await storage.getCustomers();
-      clearTimeout(timeout);
-      
-      if (res.headersSent) {
-        console.warn('API: Headers already sent, cannot respond');
-        return;
-      }
-      
-      console.log(`API: Successfully fetched ${customers.length} customers`);
-      
-      // Validate data before sending
-      if (!Array.isArray(customers)) {
-        throw new Error('Invalid data format: expected array');
-      }
-      
-      res.status(200).json(customers);
+      res.json(customers);
     } catch (error: any) {
-      console.error("API: Error fetching customers:", {
-        message: error.message,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
-        code: error.code,
-        name: error.name
+      res.status(500).json({
+        error: 'Failed to fetch customers',
+        message: error.message
       });
-      
-      if (!res.headersSent) {
-        res.status(500).json({ 
-          message: "Failed to fetch customers", 
-          error: error?.message || String(error),
-          timestamp: new Date().toISOString(),
-          environment: process.env.NODE_ENV || 'unknown'
-        });
-      }
     }
   });
 
   // Search customers
   app.get("/api/customers/search", async (req, res) => {
     try {
-      const { q } = req.query;
-      if (!q || typeof q !== "string") {
-        return res.status(400).json({ message: "Search query is required" });
+      const query = req.query.q as string;
+      if (!query) {
+        return res.status(400).json({ error: "Search query is required" });
       }
-      
-      const customers = await storage.searchCustomers(q);
+      const customers = await storage.searchCustomers(query);
       res.json(customers);
-    } catch (error) {
-      console.error("Error searching customers:", error);
-      res.status(500).json({ message: "Failed to search customers" });
+    } catch (error: any) {
+      res.status(500).json({
+        error: 'Search failed',
+        message: error.message
+      });
     }
   });
 
-  // Get single customer
-  app.get("/api/customers/:id", async (req, res) => {
+  // Create customer
+  app.post("/api/customers", async (req, res) => {
+    try {
+      const result = insertCustomerSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({
+          error: "Invalid customer data",
+          details: result.error.format()
+        });
+      }
+
+      const customer = await storage.createCustomer(result.data);
+      res.status(201).json(customer);
+    } catch (error: any) {
+      res.status(500).json({
+        error: 'Failed to create customer',
+        message: error.message
+      });
+    }
+  });
+
+  // Update customer
+  app.patch("/api/customers/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
-        return res.status(400).json({ message: "Invalid customer ID" });
+        return res.status(400).json({ error: "Invalid customer ID" });
       }
 
-      const customer = await storage.getCustomer(id);
+      const updates = req.body;
+      const customer = await storage.updateCustomer(id, updates);
+      
       if (!customer) {
-        return res.status(404).json({ message: "Customer not found" });
+        return res.status(404).json({ error: "Customer not found" });
       }
 
       res.json(customer);
-    } catch (error) {
-      console.error("Error fetching customer:", error);
-      res.status(500).json({ message: "Failed to fetch customer" });
-    }
-  });
-
-  // Create new customer
-  app.post("/api/customers", async (req, res) => {
-    try {
-      const validatedData = insertCustomerSchema.parse(req.body);
-      const customer = await storage.createCustomer(validatedData);
-      res.status(201).json(customer);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ 
-          message: "Validation error", 
-          errors: error.errors 
-        });
-      }
-      console.error("Error creating customer:", error);
-      res.status(500).json({ message: "Failed to create customer" });
+    } catch (error: any) {
+      res.status(500).json({
+        error: 'Failed to update customer',
+        message: error.message
+      });
     }
   });
 
@@ -174,119 +102,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/customers/:id/status", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      const { status } = req.body;
+
       if (isNaN(id)) {
-        return res.status(400).json({ message: "Invalid customer ID" });
+        return res.status(400).json({ error: "Invalid customer ID" });
       }
 
-      const { status } = req.body;
-      if (!status || typeof status !== "string") {
-        return res.status(400).json({ message: "Status is required" });
+      if (!status) {
+        return res.status(400).json({ error: "Status is required" });
       }
 
       const customer = await storage.updateCustomerStatus(id, status);
+      
       if (!customer) {
-        return res.status(404).json({ message: "Customer not found" });
+        return res.status(404).json({ error: "Customer not found" });
       }
 
       res.json(customer);
-    } catch (error) {
-      console.error("Error updating customer status:", error);
-      res.status(500).json({ message: "Failed to update customer status" });
-    }
-  });
-
-  // Update customer information
-  app.patch("/api/customers/:id", async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      if (isNaN(id)) {
-        return res.status(400).json({ message: "Invalid customer ID" });
-      }
-
-      const validatedData = insertCustomerSchema.partial().parse(req.body);
-      const customer = await storage.updateCustomer(id, validatedData);
-      
-      if (!customer) {
-        return res.status(404).json({ message: "Customer not found" });
-      }
-
-      res.json(customer);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ 
-          message: "Validation error", 
-          errors: error.errors 
-        });
-      }
-      console.error("Error updating customer:", error);
-      res.status(500).json({ message: "Failed to update customer" });
-    }
-  });
-
-  // Google Vision API text detection endpoint
-  app.post("/api/vision/text", async (req, res) => {
-    try {
-      const { image } = req.body;
-      
-      if (!image) {
-        return res.status(400).json({ error: "Image data is required" });
-      }
-
-      const apiKey = process.env.GOOGLE_VISION_API_KEY;
-      if (!apiKey) {
-        return res.status(500).json({ error: "Google Vision API key not configured" });
-      }
-
-      // Call Google Vision API
-      const visionResponse = await fetch(
-        `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            requests: [
-              {
-                image: {
-                  content: image
-                },
-                features: [
-                  {
-                    type: 'TEXT_DETECTION',
-                    maxResults: 10
-                  }
-                ]
-              }
-            ]
-          })
-        }
-      );
-
-      if (!visionResponse.ok) {
-        const errorText = await visionResponse.text();
-        console.error('Google Vision API error:', errorText);
-        return res.status(500).json({ error: "Vision API request failed" });
-      }
-
-      const visionResult = await visionResponse.json();
-      
-      if (visionResult.responses && visionResult.responses[0]) {
-        const textAnnotations = visionResult.responses[0].textAnnotations;
-        
-        if (textAnnotations && textAnnotations.length > 0) {
-          // First annotation contains all detected text
-          const extractedText = textAnnotations[0].description;
-          res.json({ text: extractedText });
-        } else {
-          res.json({ text: null });
-        }
-      } else {
-        res.json({ text: null });
-      }
-    } catch (error) {
-      console.error("Vision API error:", error);
-      res.status(500).json({ error: "Internal server error" });
+    } catch (error: any) {
+      res.status(500).json({
+        error: 'Failed to update customer status',
+        message: error.message
+      });
     }
   });
 

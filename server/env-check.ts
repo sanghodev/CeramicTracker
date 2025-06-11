@@ -1,17 +1,9 @@
-// Environment variable validation for deployment
 export function validateEnvironment() {
-  const required = ['DATABASE_URL'];
-  const missing = required.filter(key => !process.env[key]);
-  
-  if (missing.length > 0) {
-    console.error('Missing required environment variables:', missing);
-    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+  if (!process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL environment variable is required');
   }
-
-  // Validate DATABASE_URL format
-  const dbUrl = process.env.DATABASE_URL;
-  if (!dbUrl?.startsWith('postgresql://')) {
-    console.error('Invalid DATABASE_URL format');
+  
+  if (!process.env.DATABASE_URL.startsWith('postgresql://')) {
     throw new Error('DATABASE_URL must be a valid PostgreSQL connection string');
   }
 
