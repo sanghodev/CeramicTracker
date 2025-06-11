@@ -144,16 +144,50 @@ export function ProfileSummaryButton({ customer }: ProfileSummaryProps) {
                 </Button>
                 <Button
                   onClick={() => {
+                    // Helper function to safely escape HTML
+                    const escapeHtml = (text: string) => {
+                      const div = document.createElement('div');
+                      div.textContent = text;
+                      return div.innerHTML;
+                    };
+
                     const printContent = document.createElement('div');
-                    printContent.innerHTML = `
-                      <h1>${customer.name} 프로필 요약</h1>
-                      <p><strong>기본 정보:</strong> ${summary.basicInfo}</p>
-                      <p><strong>작업 정보:</strong> ${summary.workHistory}</p>
-                      <p><strong>선호도:</strong> ${summary.preferences}</p>
-                      ${summary.notes ? `<p><strong>참고사항:</strong> ${summary.notes}</p>` : ''}
-                      <p><strong>추천 사항:</strong></p>
-                      <ul>${summary.recommendations.map(r => `<li>${r}</li>`).join('')}</ul>
-                    `;
+                    
+                    // Create elements safely using DOM methods instead of innerHTML
+                    const h1 = document.createElement('h1');
+                    h1.textContent = `${customer.name} 프로필 요약`;
+                    printContent.appendChild(h1);
+
+                    const basicInfo = document.createElement('p');
+                    basicInfo.innerHTML = `<strong>기본 정보:</strong> ${escapeHtml(summary.basicInfo)}`;
+                    printContent.appendChild(basicInfo);
+
+                    const workInfo = document.createElement('p');
+                    workInfo.innerHTML = `<strong>작업 정보:</strong> ${escapeHtml(summary.workHistory)}`;
+                    printContent.appendChild(workInfo);
+
+                    const preferences = document.createElement('p');
+                    preferences.innerHTML = `<strong>선호도:</strong> ${escapeHtml(summary.preferences)}`;
+                    printContent.appendChild(preferences);
+
+                    if (summary.notes) {
+                      const notes = document.createElement('p');
+                      notes.innerHTML = `<strong>참고사항:</strong> ${escapeHtml(summary.notes)}`;
+                      printContent.appendChild(notes);
+                    }
+
+                    const recTitle = document.createElement('p');
+                    recTitle.innerHTML = '<strong>추천 사항:</strong>';
+                    printContent.appendChild(recTitle);
+
+                    const ul = document.createElement('ul');
+                    summary.recommendations.forEach(r => {
+                      const li = document.createElement('li');
+                      li.textContent = r;
+                      ul.appendChild(li);
+                    });
+                    printContent.appendChild(ul);
+
                     const printWindow = window.open('', '_blank');
                     if (printWindow) {
                       printWindow.document.write(printContent.innerHTML);
