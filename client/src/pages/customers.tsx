@@ -42,9 +42,14 @@ export default function Customers() {
       console.log("Customers fetched:", data.length, "customers");
       return data;
     },
-    staleTime: 0,
-    gcTime: 0
+    staleTime: 0
   });
+
+  // Clear any stale cache and force fresh data fetch
+  useEffect(() => {
+    queryClient.removeQueries({ queryKey: ["/api/customers"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+  }, []);
 
   const { data: searchResults = [], isLoading: isSearching } = useQuery({
     queryKey: ["/api/customers/search", searchQuery],

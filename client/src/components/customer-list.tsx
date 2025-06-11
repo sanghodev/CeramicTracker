@@ -38,6 +38,7 @@ export default function CustomerList() {
 
   const { data: customers = [], isLoading } = useQuery<Customer[]>({
     queryKey: ["/api/customers"],
+    staleTime: 0
   });
 
   const filteredCustomers = customers.filter((customer) =>
