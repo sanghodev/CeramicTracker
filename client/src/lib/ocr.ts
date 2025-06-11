@@ -83,17 +83,14 @@ export async function processImageWithOCR(
     onProgress(90);
     
     if (result.text) {
-      console.log('Google Vision extracted text:', result.text);
       const parsed = parseExtractedText(result.text);
       onProgress(100);
       return parsed;
     } else {
-      console.log('No text found by Google Vision API');
       onProgress(100);
       return createManualEntry();
     }
   } catch (error) {
-    console.error('Google Vision API failed:', error);
     onProgress(100);
     return createManualEntry();
   }
@@ -162,15 +159,11 @@ function parseExtractedText(text: string): ExtractedData {
     return data;
   }
   
-  console.log('Raw extracted text:', text);
-  
   // Split into lines for line-by-line analysis
   const lines = text.split(/[\n\r]+/).map(line => line.trim()).filter(line => line.length > 0);
   
   // Also prepare a single string version for pattern matching
   const singleLineText = text.replace(/[\n\r]+/g, ' ').replace(/\s+/g, ' ');
-  
-  console.log('Processing lines:', lines);
   
   // Enhanced parsing for form labels like "Name:", "Phone#:", "Email:", "Date:"
   for (const line of lines) {
@@ -189,7 +182,6 @@ function parseExtractedText(text: string): ExtractedData {
         // Also exclude single words that might be labels
         if (/^[a-zA-Z\s]{2,50}$/.test(potentialName) && potentialName.split(' ').length >= 1 && potentialName.toLowerCase() !== 'name') {
           data.name = potentialName;
-          console.log('Found name:', data.name);
         }
       }
     }
@@ -202,7 +194,6 @@ function parseExtractedText(text: string): ExtractedData {
         const digits = phoneText.replace(/\D/g, '');
         if (digits.length === 10) {
           data.phone = `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
-          console.log('Found phone:', data.phone);
         }
       }
     }
@@ -216,7 +207,6 @@ function parseExtractedText(text: string): ExtractedData {
         const foundEmail = emailText.match(emailPattern);
         if (foundEmail) {
           data.email = foundEmail[1];
-          console.log('Found email:', data.email);
         }
       }
     }
@@ -248,7 +238,6 @@ function parseExtractedText(text: string): ExtractedData {
       const digits = phoneMatch[1].replace(/\D/g, '');
       if (digits.length === 10) {
         data.phone = `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
-        console.log('Found phone (fallback):', data.phone);
       }
     }
   }
@@ -258,7 +247,6 @@ function parseExtractedText(text: string): ExtractedData {
     const emailMatch = singleLineText.match(emailPattern);
     if (emailMatch) {
       data.email = emailMatch[1];
-      console.log('Found email (fallback):', data.email);
     }
   }
   
@@ -266,12 +254,16 @@ function parseExtractedText(text: string): ExtractedData {
     // Look for potential names (sequences of 2-4 words with only letters)
     for (const line of lines) {
       if (!/[\d@#:()]/.test(line)) { // Skip lines with numbers, symbols
-        const words = line.split(/\s+/).filter(word => /^[a-zA-Z]+$/.test(word));
+        const words = line.split(/\s+/).filter(word => /^[a-zA-Z]+$/.test(word) && word.toLowerCase() !== 'name');
         if (words.length >= 2 && words.length <= 4) {
           const potentialName = words.join(' ');
-          if (potentialName.length >= 4 && potentialName.length <= 50) {
+          // Additional filtering to exclude common form labels
+          if (potentialName.length >= 4 && potentialName.length <= 50 && 
+              !potentialName.toLowerCase().includes('name') &&
+              !potentialName.toLowerCase().includes('phone') &&
+              !potentialName.toLowerCase().includes('email') &&
+              !potentialName.toLowerCase().includes('date')) {
             data.name = potentialName;
-            console.log('Found name (fallback):', data.name);
             break;
           }
         }
@@ -279,6 +271,5 @@ function parseExtractedText(text: string): ExtractedData {
     }
   }
   
-  console.log('Final parsed data:', data);
   return data;
 }

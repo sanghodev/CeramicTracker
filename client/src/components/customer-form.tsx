@@ -152,58 +152,74 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
 
   const startWorkCamera = async () => {
     try {
+      // Check if getUserMedia is supported
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error("Camera not supported by this browser");
       }
 
+      // Show camera UI first
+      setShowWorkCamera(true);
+
       let stream;
       try {
-        // Try with environment camera first for mobile
+        // Try with environment camera first, fallback to any camera
         stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { 
-            facingMode: 'environment',
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          } 
+          video: { facingMode: 'environment' } 
         });
       } catch (envError) {
         // Fallback to any available camera
         stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { 
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          } 
+          video: true 
         });
       }
-      
-      if (workVideoRef.current) {
+
+      if (workVideoRef.current && stream) {
         workVideoRef.current.srcObject = stream;
-        setShowWorkCamera(true);
         
-        // Ensure video plays on mobile
-        workVideoRef.current.onloadedmetadata = () => {
-          workVideoRef.current?.play().catch(console.error);
+        // Wait for video to load and then play
+        workVideoRef.current.onloadedmetadata = async () => {
+          try {
+            await workVideoRef.current?.play();
+            toast({
+              title: "Camera Started",
+              description: "Position the work and tap capture when ready.",
+            });
+          } catch (playError) {
+            console.error("Video play error:", playError);
+            // Try to play without waiting
+            workVideoRef.current?.play().catch(() => {
+              // Silent fail, camera might still work
+            });
+          }
         };
-        
-        toast({
-          title: "Camera Started",
-          description: "Position the work and tap capture when ready.",
-        });
+
+        // Also try to play immediately in case metadata is already loaded
+        try {
+          await workVideoRef.current.play();
+        } catch (immediatePlayError) {
+          // This is expected on some devices, onloadedmetadata will handle it
+        }
       }
     } catch (error) {
+      setShowWorkCamera(false);
       console.error("Camera error:", error);
       
       let errorMessage = "Unable to access camera. ";
+      
       if (error instanceof DOMException) {
         if (error.name === 'NotAllowedError') {
-          errorMessage += "Please allow camera permissions and try again.";
+          errorMessage += "Please allow camera permissions in your browser settings and try again.";
         } else if (error.name === 'NotFoundError') {
-          errorMessage += "No camera found on this device.";
+          errorMessage += "No camera device found on this device.";
+        } else if (error.name === 'NotSupportedError') {
+          errorMessage += "Camera not supported by this browser. Try using a different browser.";
         } else {
-          errorMessage += "Please check permissions and try again.";
+          errorMessage += "Please check permissions and try again, or use the upload option.";
         }
+      } else if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+        errorMessage += "Camera requires HTTPS. Please use the upload option instead.";
       } else {
-        errorMessage += "Please use the upload option instead.";
+        errorMessage += "Please check permissions and try again, or use the upload option.";
       }
       
       toast({
@@ -224,24 +240,55 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
   };
 
   const captureWorkPhoto = (field: any) => {
-    if (!workVideoRef.current || !workCanvasRef.current) return;
+    if (!workVideoRef.current || !workCanvasRef.current) {
+      toast({
+        title: "Camera Error",
+        description: "Camera not ready. Please try again.",
+        variant: "destructive"
+      });
+      return;
+    }
 
     const canvas = workCanvasRef.current;
     const video = workVideoRef.current;
+    
+    // Ensure video has dimensions
+    if (video.videoWidth === 0 || video.videoHeight === 0) {
+      toast({
+        title: "Camera Error", 
+        description: "Video not ready. Please wait a moment and try again.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      ctx.drawImage(video, 0, 0);
+      // Draw the current video frame to canvas
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      // Convert to base64 image data
       const imageData = canvas.toDataURL('image/jpeg', 0.8);
+      
+      // Update preview and form
       setWorkImagePreview(imageData);
       field.onChange(imageData);
+      
+      // Stop camera
       stopWorkCamera();
       
       toast({
         title: "Photo Captured",
         description: "Work photo has been captured successfully.",
+      });
+    } else {
+      toast({
+        title: "Camera Error",
+        description: "Unable to process photo. Please try again.",
+        variant: "destructive"
       });
     }
   };
