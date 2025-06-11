@@ -241,6 +241,91 @@ export default function Customers() {
     });
   };
 
+  const downloadAllImages = () => {
+    const now = new Date();
+    let filteredData = customers;
+
+    // Apply same date filtering as CSV export
+    if (exportDateRange !== "all") {
+      const today = new Date();
+      const startDate = new Date();
+      
+      if (exportDateRange === "today") {
+        startDate.setHours(0, 0, 0, 0);
+        today.setHours(23, 59, 59, 999);
+      } else if (exportDateRange === "week") {
+        startDate.setDate(today.getDate() - 7);
+      } else if (exportDateRange === "month") {
+        startDate.setMonth(today.getMonth() - 1);
+      }
+
+      if (exportDateRange !== "all") {
+        filteredData = customers.filter((customer: Customer) => 
+          new Date(customer.workDate) >= startDate && new Date(customer.workDate) <= today
+        );
+      }
+    }
+
+    // Filter customers with images
+    const customersWithImages = filteredData.filter((customer: Customer) => 
+      customer.customerImage || customer.workImage
+    );
+
+    if (customersWithImages.length === 0) {
+      toast({
+        title: "No Images Found",
+        description: "No customers have uploaded images in the selected date range.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Download each image
+    let downloadCount = 0;
+    customersWithImages.forEach((customer: Customer, index: number) => {
+      setTimeout(() => {
+        // Download customer info image
+        if (customer.customerImage) {
+          const link = document.createElement("a");
+          link.href = customer.customerImage;
+          link.download = `${customer.customerId || `customer_${customer.id}`}_info_image.jpg`;
+          link.style.visibility = "hidden";
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          downloadCount++;
+        }
+
+        // Download work image
+        if (customer.workImage) {
+          const link = document.createElement("a");
+          link.href = customer.workImage;
+          link.download = `${customer.customerId || `customer_${customer.id}`}_work_image.jpg`;
+          link.style.visibility = "hidden";
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          downloadCount++;
+        }
+
+        // Show completion toast after last download
+        if (index === customersWithImages.length - 1) {
+          setTimeout(() => {
+            toast({
+              title: "Images Download Complete",
+              description: `Downloaded ${downloadCount} images from ${customersWithImages.length} customers.`,
+            });
+          }, 500);
+        }
+      }, index * 200); // Stagger downloads to avoid browser blocking
+    });
+
+    toast({
+      title: "Starting Image Downloads",
+      description: `Downloading images from ${customersWithImages.length} customers...`,
+    });
+  };
+
   const suggestedDates = getSuggestedDates();
 
   return (
@@ -317,6 +402,10 @@ export default function Customers() {
                     <Button onClick={exportToCSV} variant="outline" size="sm">
                       <Download className="h-4 w-4 mr-2" />
                       Export to Excel
+                    </Button>
+                    <Button onClick={downloadAllImages} variant="outline" size="sm">
+                      <Download className="h-4 w-4 mr-2" />
+                      Download Images
                     </Button>
                   </div>
                 </div>
@@ -509,6 +598,12 @@ export default function Customers() {
                       <div className="space-y-4">
                         <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                           <div className="flex-1 space-y-2">
+                            {/* Customer ID - Prominently displayed */}
+                            {customer.customerId && (
+                              <div className="bg-slate-100 border border-slate-200 rounded-md px-3 py-1 mb-3 inline-block">
+                                <span className="text-sm font-mono font-semibold text-slate-700">ID: {customer.customerId}</span>
+                              </div>
+                            )}
                             <div className="flex flex-wrap items-center gap-2 mb-2">
                               <h3 className="text-lg font-semibold text-slate-800">{customer.name}</h3>
                               <Badge variant={getStatusBadge(customer.status)}>

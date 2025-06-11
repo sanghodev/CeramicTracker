@@ -18,7 +18,7 @@ export interface IStorage {
 }
 
 // Helper function to generate unique customer ID
-function generateCustomerId(workDate: Date, programType: string): string {
+function generateCustomerId(workDate: Date, programType?: string): string {
   const year = workDate.getFullYear().toString().slice(-2);
   const month = (workDate.getMonth() + 1).toString().padStart(2, '0');
   const day = workDate.getDate().toString().padStart(2, '0');
@@ -30,7 +30,7 @@ function generateCustomerId(workDate: Date, programType: string): string {
     'advanced_ceramic': 'C2'
   };
   
-  const programCode = programCodes[programType] || 'P';
+  const programCode = programCodes[programType || 'painting'] || 'P';
   const datePrefix = `${year}${month}${day}`;
   
   // Generate a random 3-digit number for uniqueness
@@ -82,7 +82,7 @@ export class DatabaseStorage implements IStorage {
 
   async createCustomer(insertCustomer: InsertCustomer): Promise<Customer> {
     // Generate unique customer ID
-    const customerId = generateCustomerId(insertCustomer.workDate, insertCustomer.programType || 'painting');
+    const customerId = generateCustomerId(insertCustomer.workDate, insertCustomer.programType);
     
     const [customer] = await db
       .insert(customers)
