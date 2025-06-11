@@ -514,47 +514,30 @@ export default function ImageSearch() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {/* Camera Controls */}
-              <div className="space-y-4">
-                <div className="flex flex-wrap gap-2">
-                  {!cameraActive && !capturedImage && (
-                    <Button onClick={startCamera} className="flex items-center gap-2">
-                      <Camera className="h-4 w-4" />
+              {/* Initial Controls - only show when no camera is active */}
+              {!cameraActive && !capturedImage && (
+                <div className="space-y-4">
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                    <Button 
+                      onClick={startCamera} 
+                      size="lg"
+                      className="flex items-center gap-2 h-12"
+                    >
+                      <Camera className="h-5 w-5" />
                       Start Camera
                     </Button>
-                  )}
-                  
-                  {cameraActive && (
-                    <>
-                      <Button onClick={capturePhoto} className="flex items-center gap-2">
-                        <Camera className="h-4 w-4" />
-                        Capture Photo
-                      </Button>
-                      <Button onClick={stopCamera} variant="outline">
-                        Stop Camera
-                      </Button>
-                    </>
-                  )}
-                  
-                  <Button 
-                    onClick={() => fileInputRef.current?.click()} 
-                    variant={!cameraActive ? "default" : "outline"}
-                    className="flex items-center gap-2"
-                  >
-                    <Search className="h-4 w-4" />
-                    Upload Image
-                  </Button>
-                  
-                  {capturedImage && (
-                    <Button onClick={resetSearch} variant="outline">
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Reset
+                    <Button 
+                      onClick={() => fileInputRef.current?.click()} 
+                      variant="outline"
+                      size="lg"
+                      className="flex items-center gap-2 h-12"
+                    >
+                      <Search className="h-5 w-5" />
+                      Upload Image
                     </Button>
-                  )}
-                </div>
+                  </div>
 
-                {/* Camera Permission Help */}
-                {!cameraActive && !capturedImage && (
+                  {/* Camera Permission Help */}
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <div className="text-sm text-blue-800">
                       <p className="font-medium mb-2">Camera Access Tips:</p>
@@ -566,8 +549,8 @@ export default function ImageSearch() {
                       </ul>
                     </div>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
 
               {/* Hidden file input */}
               <input
@@ -578,17 +561,65 @@ export default function ImageSearch() {
                 className="hidden"
               />
 
-              {/* Camera Video */}
+              {/* Camera Video with Controls Below */}
               {cameraActive && (
+                <div className="space-y-4">
+                  {/* Video Feed */}
+                  <div className="flex justify-center">
+                    <div className="relative">
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        className="max-w-full h-64 sm:h-80 rounded-lg border shadow-lg"
+                        style={{ minHeight: '256px' }}
+                      />
+                      {/* Overlay instruction */}
+                      <div className="absolute bottom-2 left-2 right-2 bg-black/70 text-white text-xs p-2 rounded">
+                        Position the image in the frame and tap capture
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Camera Controls Below Video */}
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                    <Button 
+                      onClick={capturePhoto} 
+                      size="lg"
+                      className="flex items-center gap-2 h-12 bg-green-600 hover:bg-green-700"
+                    >
+                      <Camera className="h-5 w-5" />
+                      Capture Photo
+                    </Button>
+                    <Button 
+                      onClick={stopCamera} 
+                      variant="outline"
+                      size="lg"
+                      className="flex items-center gap-2 h-12"
+                    >
+                      Stop Camera
+                    </Button>
+                    <Button 
+                      onClick={() => fileInputRef.current?.click()} 
+                      variant="outline"
+                      size="lg"
+                      className="flex items-center gap-2 h-12"
+                    >
+                      <Search className="h-5 w-5" />
+                      Upload Instead
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Reset button for captured image */}
+              {capturedImage && (
                 <div className="flex justify-center">
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="max-w-full h-64 rounded-lg border"
-                    style={{ minHeight: '256px' }}
-                  />
+                  <Button onClick={resetSearch} variant="outline" size="lg" className="h-12">
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Take New Photo
+                  </Button>
                 </div>
               )}
 
