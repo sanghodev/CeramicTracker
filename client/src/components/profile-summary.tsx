@@ -29,10 +29,10 @@ export function ProfileSummaryButton({ customer }: ProfileSummaryProps) {
         variant="outline"
         size="sm"
         className="flex-shrink-0"
-        title="프로필 요약 생성"
+        title="Generate Profile Summary"
       >
         <FileText className="h-4 w-4 mr-1 sm:mr-2" />
-        <span className="hidden sm:inline">요약</span>
+        <span className="hidden sm:inline">Summary</span>
       </Button>
 
       {/* Modal */}
@@ -41,7 +41,7 @@ export function ProfileSummaryButton({ customer }: ProfileSummaryProps) {
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-xl">
             <div className="flex justify-between items-center p-4 border-b bg-slate-50">
               <div>
-                <h2 className="text-lg font-semibold text-slate-800">{customer.name} 프로필 요약</h2>
+                <h2 className="text-lg font-semibold text-slate-800">{customer.name} Profile Summary</h2>
                 <p className="text-sm text-slate-600">{quickSummary}</p>
               </div>
               <Button
@@ -60,7 +60,7 @@ export function ProfileSummaryButton({ customer }: ProfileSummaryProps) {
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-base">
                     <User className="h-4 w-4 text-blue-500" />
-                    기본 정보
+                    Basic Information
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -73,7 +73,7 @@ export function ProfileSummaryButton({ customer }: ProfileSummaryProps) {
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Calendar className="h-4 w-4 text-green-500" />
-                    작업 정보
+                    Work Information
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -86,7 +86,7 @@ export function ProfileSummaryButton({ customer }: ProfileSummaryProps) {
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-base">
                     <MessageSquare className="h-4 w-4 text-purple-500" />
-                    선호도 및 특이사항
+                    Preferences & Special Notes
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -100,7 +100,7 @@ export function ProfileSummaryButton({ customer }: ProfileSummaryProps) {
                   <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-2 text-base">
                       <MessageSquare className="h-4 w-4 text-orange-500" />
-                      참고사항
+                      Notes
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -115,7 +115,7 @@ export function ProfileSummaryButton({ customer }: ProfileSummaryProps) {
                   <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-2 text-base">
                       <Lightbulb className="h-4 w-4 text-yellow-500" />
-                      추천 사항
+                      Recommendations
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -140,7 +140,7 @@ export function ProfileSummaryButton({ customer }: ProfileSummaryProps) {
                   onClick={() => setIsOpen(false)}
                   variant="outline"
                 >
-                  닫기
+                  Close
                 </Button>
                 <Button
                   onClick={() => {
@@ -155,29 +155,29 @@ export function ProfileSummaryButton({ customer }: ProfileSummaryProps) {
                     
                     // Create elements safely using DOM methods instead of innerHTML
                     const h1 = document.createElement('h1');
-                    h1.textContent = `${customer.name} 프로필 요약`;
+                    h1.textContent = `${customer.name} Profile Summary`;
                     printContent.appendChild(h1);
 
                     const basicInfo = document.createElement('p');
-                    basicInfo.innerHTML = `<strong>기본 정보:</strong> ${escapeHtml(summary.basicInfo)}`;
+                    basicInfo.innerHTML = `<strong>Basic Information:</strong> ${escapeHtml(summary.basicInfo)}`;
                     printContent.appendChild(basicInfo);
 
                     const workInfo = document.createElement('p');
-                    workInfo.innerHTML = `<strong>작업 정보:</strong> ${escapeHtml(summary.workHistory)}`;
+                    workInfo.innerHTML = `<strong>Work Information:</strong> ${escapeHtml(summary.workHistory)}`;
                     printContent.appendChild(workInfo);
 
                     const preferences = document.createElement('p');
-                    preferences.innerHTML = `<strong>선호도:</strong> ${escapeHtml(summary.preferences)}`;
+                    preferences.innerHTML = `<strong>Preferences:</strong> ${escapeHtml(summary.preferences)}`;
                     printContent.appendChild(preferences);
 
                     if (summary.notes) {
                       const notes = document.createElement('p');
-                      notes.innerHTML = `<strong>참고사항:</strong> ${escapeHtml(summary.notes)}`;
+                      notes.innerHTML = `<strong>Notes:</strong> ${escapeHtml(summary.notes)}`;
                       printContent.appendChild(notes);
                     }
 
                     const recTitle = document.createElement('p');
-                    recTitle.innerHTML = '<strong>추천 사항:</strong>';
+                    recTitle.innerHTML = '<strong>Recommendations:</strong>';
                     printContent.appendChild(recTitle);
 
                     const ul = document.createElement('ul');
@@ -196,7 +196,7 @@ export function ProfileSummaryButton({ customer }: ProfileSummaryProps) {
                     }
                   }}
                 >
-                  인쇄
+                  Print
                 </Button>
               </div>
             </div>
