@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { ImageZoom } from "@/components/ui/image-zoom";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { getImageUrl } from "@/lib/image-utils";
 import type { Customer } from "@shared/schema";
 
 interface ImageMatch {
@@ -204,27 +205,33 @@ export default function ImageSearch() {
       for (const customer of customers) {
         // Check customer image
         if (customer.customerImage) {
-          const similarity = await compareImages(capturedImage, customer.customerImage);
+          const imageUrl = getImageUrl(customer.customerImage);
+          if (imageUrl) {
+            const similarity = await compareImages(capturedImage, imageUrl);
 
-          if (similarity > 0.35) { // Raised threshold to 35% to filter out poor matches
-            matches.push({
-              customer,
-              similarity,
-              matchType: 'customer'
-            });
+            if (similarity > 0.35) { // Raised threshold to 35% to filter out poor matches
+              matches.push({
+                customer,
+                similarity,
+                matchType: 'customer'
+              });
+            }
           }
         }
         
         // Check work image
         if (customer.workImage) {
-          const similarity = await compareImages(capturedImage, customer.workImage);
+          const imageUrl = getImageUrl(customer.workImage);
+          if (imageUrl) {
+            const similarity = await compareImages(capturedImage, imageUrl);
 
-          if (similarity > 0.35) { // Raised threshold to 35% to filter out poor matches
-            matches.push({
-              customer,
-              similarity,
-              matchType: 'work'
-            });
+            if (similarity > 0.35) { // Raised threshold to 35% to filter out poor matches
+              matches.push({
+                customer,
+                similarity,
+                matchType: 'work'
+              });
+            }
           }
         }
       }
@@ -711,7 +718,7 @@ export default function ImageSearch() {
                         {match.matchType === 'customer' && match.customer.customerImage && (
                           <div className="relative">
                             <ImageZoom
-                              src={match.customer.customerImage}
+                              src={getImageUrl(match.customer.customerImage) || ''}
                               alt={`${match.customer.name}'s customer photo`}
                               thumbnailClassName="w-20 h-20 border-2 border-blue-200 hover:border-blue-400 transition-colors"
                             />
@@ -724,7 +731,7 @@ export default function ImageSearch() {
                         {match.matchType === 'work' && match.customer.workImage && (
                           <div className="relative">
                             <ImageZoom
-                              src={match.customer.workImage}
+                              src={getImageUrl(match.customer.workImage) || ''}
                               alt={`${match.customer.name}'s artwork`}
                               thumbnailClassName="w-20 h-20 border-2 border-green-200 hover:border-green-400 transition-colors"
                             />

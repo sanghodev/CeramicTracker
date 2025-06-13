@@ -287,26 +287,32 @@ export default function Customers() {
       setTimeout(() => {
         // Download customer info image
         if (customer.customerImage) {
-          const link = document.createElement("a");
-          link.href = customer.customerImage;
-          link.download = `${customer.customerId || `customer_${customer.id}`}_info_image.jpg`;
-          link.style.visibility = "hidden";
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          downloadCount++;
+          const imageUrl = getImageUrl(customer.customerImage);
+          if (imageUrl) {
+            const link = document.createElement("a");
+            link.href = imageUrl;
+            link.download = `${customer.customerId || `customer_${customer.id}`}_info_image.jpg`;
+            link.style.visibility = "hidden";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            downloadCount++;
+          }
         }
 
         // Download work image
         if (customer.workImage) {
-          const link = document.createElement("a");
-          link.href = customer.workImage;
-          link.download = `${customer.customerId || `customer_${customer.id}`}_work_image.jpg`;
-          link.style.visibility = "hidden";
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          downloadCount++;
+          const imageUrl = getImageUrl(customer.workImage);
+          if (imageUrl) {
+            const link = document.createElement("a");
+            link.href = imageUrl;
+            link.download = `${customer.customerId || `customer_${customer.id}`}_work_image.jpg`;
+            link.style.visibility = "hidden";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            downloadCount++;
+          }
         }
 
         // Show completion toast after last download
@@ -670,7 +676,7 @@ export default function Customers() {
                               {customer.customerImage && (
                                 <div className="relative group">
                                   <ImageZoom
-                                    src={customer.customerImage}
+                                    src={getImageUrl(customer.customerImage) || ''}
                                     alt={`${customer.name}'s information image`}
                                     thumbnailClassName="w-16 h-16 sm:w-20 sm:h-20 border-2 border-blue-200 hover:border-blue-400 transition-colors"
                                   />
@@ -682,7 +688,7 @@ export default function Customers() {
                               {customer.workImage && (
                                 <div className="relative group">
                                   <ImageZoom
-                                    src={customer.workImage}
+                                    src={getImageUrl(customer.workImage) || ''}
                                     alt={`${customer.name}'s work image`}
                                     thumbnailClassName="w-16 h-16 sm:w-20 sm:h-20 border-2 border-green-200 hover:border-green-400 transition-colors"
                                   />
