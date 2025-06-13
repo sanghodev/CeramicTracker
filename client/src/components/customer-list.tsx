@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatWorkDate, formatRegistrationDate } from "@/lib/date-utils";
 import type { Customer } from "@shared/schema";
 
 const getStatusColor = (status: string) => {
@@ -39,7 +38,6 @@ export default function CustomerList() {
 
   const { data: customers = [], isLoading } = useQuery<Customer[]>({
     queryKey: ["/api/customers"],
-    staleTime: 0
   });
 
   const filteredCustomers = customers.filter((customer) =>
@@ -156,11 +154,11 @@ export default function CustomerList() {
                         )}
                         <div className="flex items-center space-x-2">
                           <Calendar size={14} className="w-4" />
-                          <span>{formatWorkDate(customer.workDate)}</span>
+                          <span>{new Date(customer.workDate).toLocaleDateString('en-US')}</span>
                         </div>
                         {customer.isGroup === "true" && customer.groupId && (
                           <div className="flex items-center space-x-2">
-                            <span className="text-xs">🏷️ Group: {customer.groupId}</span>
+                            <span className="text-xs">🏷️ ID: {customer.groupId}</span>
                           </div>
                         )}
                       </div>

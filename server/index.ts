@@ -1,34 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { validateEnvironment, getEnvironmentInfo } from "./env-check";
 
 const app = express();
-
-// Enhanced CORS configuration for deployment
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  
-  // Allow requests from Replit domains and localhost
-  if (!origin || 
-      origin.includes('.replit.app') || 
-      origin.includes('localhost') || 
-      origin.includes('127.0.0.1')) {
-    res.header('Access-Control-Allow-Origin', origin || '*');
-  }
-  
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  
-  if (req.method === 'OPTIONS') {
-    res.sendStatus(200);
-    return;
-  }
-  
-  next();
-});
-
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: false, limit: "50mb" }));
 
@@ -63,38 +37,14 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Validate environment variables before starting
-  try {
-    validateEnvironment();
-    console.log('Server environment info:', getEnvironmentInfo());
-  } catch (error: any) {
-    console.error('Environment validation failed:', error.message);
-    process.exit(1);
-  }
-
-  // Import database module to initialize connection
-  await import('./db');
-
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
-    console.error('Server Error:', {
-      status,
-      message,
-      stack: err.stack,
-      url: _req.url,
-      method: _req.method,
-      timestamp: new Date().toISOString()
-    });
-
-    res.status(status).json({ 
-      message,
-      error: process.env.NODE_ENV === 'development' ? err.stack : undefined,
-      timestamp: new Date().toISOString()
-    });
+    res.status(status).json({ message });
+    throw err;
   });
 
   // importantly only setup vite in development and after

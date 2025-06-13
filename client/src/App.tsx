@@ -3,7 +3,6 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { ConnectionMonitor } from "@/components/connection-monitor";
 import { Button } from "@/components/ui/button";
 import { Camera, Users, Search } from "lucide-react";
 import Home from "@/pages/home";
@@ -72,11 +71,8 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <div className="min-h-screen bg-slate-50">
-          <ConnectionMonitor />
-          <Router />
-        </div>
         <Toaster />
+        <Router />
       </TooltipProvider>
     </QueryClientProvider>
   );

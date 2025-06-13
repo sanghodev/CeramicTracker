@@ -1,1 +1,0 @@
-// This file is no longer needed - health checks are handled in routes.ts

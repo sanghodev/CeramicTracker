@@ -17,20 +17,26 @@ export interface IStorage {
   updateCustomerStatus(id: number, status: string): Promise<Customer | undefined>;
 }
 
-// Generate unique customer ID based on work date and program type
+// Helper function to generate unique customer ID
 function generateCustomerId(workDate: Date, programType?: string): string {
-  const date = new Date(workDate);
-  const year = date.getFullYear().toString().slice(-2);
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+  const year = workDate.getFullYear().toString().slice(-2);
+  const month = (workDate.getMonth() + 1).toString().padStart(2, '0');
+  const day = workDate.getDate().toString().padStart(2, '0');
   
-  const programCode = programType === 'painting' ? 'P' : 
-                      programType === 'handBuilding' ? 'H' : 
-                      programType === 'wheelThrowing' ? 'W' : 'G';
+  // Program type codes
+  const programCodes: Record<string, string> = {
+    'painting': 'P',
+    'one_time_ceramic': 'C1',
+    'advanced_ceramic': 'C2'
+  };
   
-  const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+  const programCode = programCodes[programType || 'painting'] || 'P';
+  const datePrefix = `${year}${month}${day}`;
   
-  return `${year}${month}${day}-${programCode}-${randomNum}`;
+  // Generate a random 3-digit number for uniqueness
+  const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+  
+  return `${datePrefix}-${programCode}-${randomSuffix}`;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -60,13 +66,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCustomers(): Promise<Customer[]> {
-    try {
-      const customerList = await db.select().from(customers).orderBy(desc(customers.createdAt));
-      return customerList;
-    } catch (error: any) {
-      console.error('Database query failed:', error.message);
-      throw new Error(`Database error: ${error.message}`);
-    }
+    return await db.select().from(customers).orderBy(desc(customers.createdAt));
   }
 
   async searchCustomers(query: string): Promise<Customer[]> {
