@@ -11,8 +11,8 @@ export const customers = pgTable("customers", {
   workDate: timestamp("work_date").notNull(),
   status: varchar("status", { length: 20 }).notNull().default("waiting"),
   programType: varchar("program_type", { length: 50 }).notNull().default("painting"), // "painting", "one_time_ceramic", "advanced_ceramic"
-  workImage: text("work_image"), // Base64 encoded image
-  customerImage: text("customer_image"), // Base64 encoded customer info image
+  workImage: varchar("work_image", { length: 255 }), // Image filename
+  customerImage: varchar("customer_image", { length: 255 }), // Customer info image filename
   isGroup: text("is_group").default("false").notNull(), // "true" or "false"
   groupId: varchar("group_id", { length: 20 }), // Format: YYMMDD-XYZ (e.g., 250606-2A01)
   groupSize: text("group_size"), // Store as text to avoid type issues

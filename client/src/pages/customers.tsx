@@ -9,6 +9,7 @@ import { ImageZoom } from "@/components/ui/image-zoom";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatPhoneNumber, isValidEmail, getSuggestedDates } from "@/lib/ocr";
+import { getImageUrl } from "@/lib/image-utils";
 import type { Customer } from "@shared/schema";
 
 import { ProfileSummaryButton, QuickSummaryBadge } from "@/components/profile-summary";

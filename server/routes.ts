@@ -3,8 +3,88 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertCustomerSchema } from "@shared/schema";
 import { z } from "zod";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import { v4 as uuidv4 } from "uuid";
+import sharp from "sharp";
+import express from "express";
+
+// Create uploads directory if it doesn't exist
+const uploadsDir = path.join(process.cwd(), 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Configure multer for file uploads
+const storage_multer = multer.memoryStorage();
+const upload = multer({ 
+  storage: storage_multer,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only JPEG, PNG, and WebP images are allowed'));
+    }
+  }
+});
+
+// Helper function to save base64 image
+async function saveBase64Image(base64Data: string, type: 'work' | 'customer'): Promise<string> {
+  // Remove data URL prefix if present
+  const base64String = base64Data.replace(/^data:image\/[a-z]+;base64,/, '');
+  const buffer = Buffer.from(base64String, 'base64');
+  
+  const filename = `${type}_${uuidv4()}.jpg`;
+  const filepath = path.join(uploadsDir, filename);
+  
+  // Optimize and save image using sharp
+  await sharp(buffer)
+    .jpeg({ quality: 80 })
+    .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
+    .toFile(filepath);
+  
+  return filename;
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Serve static files from uploads directory
+  app.use('/uploads', (req, res, next) => {
+    res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year cache
+    next();
+  });
+  app.use('/uploads', express.static(uploadsDir));
+
+  // Image upload endpoint
+  app.post('/api/upload', upload.single('image'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: 'No file uploaded' });
+      }
+
+      const { type } = req.body; // 'work' or 'customer'
+      if (!type || !['work', 'customer'].includes(type)) {
+        return res.status(400).json({ message: 'Invalid image type' });
+      }
+
+      const filename = `${type}_${uuidv4()}.jpg`;
+      const filepath = path.join(uploadsDir, filename);
+
+      // Optimize and save image
+      await sharp(req.file.buffer)
+        .jpeg({ quality: 80 })
+        .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
+        .toFile(filepath);
+
+      res.json({ filename, url: `/uploads/${filename}` });
+    } catch (error) {
+      console.error('Upload error:', error);
+      res.status(500).json({ message: 'Failed to upload image' });
+    }
+  });
+
   // Get all customers
   app.get("/api/customers", async (req, res) => {
     try {
@@ -55,7 +135,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create new customer
   app.post("/api/customers", async (req, res) => {
     try {
-      const validatedData = insertCustomerSchema.parse(req.body);
+      const data = req.body;
+      
+      // Process images if they are base64 strings
+      if (data.workImage && data.workImage.startsWith('data:image/')) {
+        data.workImage = await saveBase64Image(data.workImage, 'work');
+      }
+      
+      if (data.customerImage && data.customerImage.startsWith('data:image/')) {
+        data.customerImage = await saveBase64Image(data.customerImage, 'customer');
+      }
+      
+      const validatedData = insertCustomerSchema.parse(data);
       const customer = await storage.createCustomer(validatedData);
       res.status(201).json(customer);
     } catch (error) {
@@ -103,7 +194,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid customer ID" });
       }
 
-      const validatedData = insertCustomerSchema.partial().parse(req.body);
+      const data = req.body;
+      
+      // Process images if they are base64 strings
+      if (data.workImage && data.workImage.startsWith('data:image/')) {
+        data.workImage = await saveBase64Image(data.workImage, 'work');
+      }
+      
+      if (data.customerImage && data.customerImage.startsWith('data:image/')) {
+        data.customerImage = await saveBase64Image(data.customerImage, 'customer');
+      }
+
+      const validatedData = insertCustomerSchema.partial().parse(data);
       const customer = await storage.updateCustomer(id, validatedData);
       
       if (!customer) {
