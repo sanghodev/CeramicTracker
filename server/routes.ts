@@ -225,6 +225,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Check image files status
+  app.get("/api/check-images", async (req, res) => {
+    try {
+      const customers = await storage.getCustomers();
+      const imageFiles = new Set<string>();
+      const missingFiles: string[] = [];
+      
+      // Collect all image filenames from database
+      customers.forEach(customer => {
+        if (customer.workImage) imageFiles.add(customer.workImage);
+        if (customer.customerImage) imageFiles.add(customer.customerImage);
+      });
+      
+      // Check if files exist in uploads folder
+      for (const filename of imageFiles) {
+        const filepath = path.join(uploadsDir, filename);
+        if (!fs.existsSync(filepath)) {
+          missingFiles.push(filename);
+        }
+      }
+      
+      // Get actual files in uploads folder
+      const actualFiles = fs.readdirSync(uploadsDir).filter(file => 
+        file.endsWith('.jpg') || file.endsWith('.png') || file.endsWith('.webp')
+      );
+      
+      res.json({
+        databaseImages: Array.from(imageFiles),
+        actualFiles,
+        missingFiles,
+        totalInDatabase: imageFiles.size,
+        totalInFolder: actualFiles.length
+      });
+    } catch (error) {
+      console.error("Error checking images:", error);
+      res.status(500).json({ message: "Failed to check images" });
+    }
+  });
+
   // Google Vision API text detection endpoint
   app.post("/api/vision/text", async (req, res) => {
     try {
