@@ -31,13 +31,24 @@ const upload = multer({
   }
 });
 
-// Helper function to save base64 image
-async function saveBase64Image(base64Data: string, type: 'work' | 'customer'): Promise<string> {
+// Helper function to save base64 image with structured naming
+async function saveBase64Image(base64Data: string, type: 'work' | 'customer', customerId?: string, workDate?: string): Promise<string> {
   // Remove data URL prefix if present
   const base64String = base64Data.replace(/^data:image\/[a-z]+;base64,/, '');
   const buffer = Buffer.from(base64String, 'base64');
   
-  const filename = `${type}_${uuidv4()}.jpg`;
+  // Create structured filename: CustomerID_WorkDate_Type_Timestamp.jpg
+  let filename: string;
+  if (customerId && workDate) {
+    const date = new Date(workDate);
+    const dateStr = date.toISOString().split('T')[0].replace(/-/g, ''); // YYYYMMDD
+    const timestamp = Date.now();
+    filename = `${customerId}_${dateStr}_${type}_${timestamp}.jpg`;
+  } else {
+    // Fallback to UUID if customerId/workDate not available
+    filename = `${type}_${uuidv4()}.jpg`;
+  }
+  
   const filepath = path.join(uploadsDir, filename);
   
   // Optimize and save image using sharp
@@ -137,18 +148,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const data = req.body;
       
-      // Process images if they are base64 strings
-      if (data.workImage && data.workImage.startsWith('data:image/')) {
-        data.workImage = await saveBase64Image(data.workImage, 'work');
-      }
+      // Store original base64 images temporarily
+      const originalWorkImage = data.workImage;
+      const originalCustomerImage = data.customerImage;
       
+      // Remove base64 images for initial customer creation
+      if (data.workImage && data.workImage.startsWith('data:image/')) {
+        data.workImage = null;
+      }
       if (data.customerImage && data.customerImage.startsWith('data:image/')) {
-        data.customerImage = await saveBase64Image(data.customerImage, 'customer');
+        data.customerImage = null;
       }
       
       const validatedData = insertCustomerSchema.parse(data);
       const customer = await storage.createCustomer(validatedData);
-      res.status(201).json(customer);
+      
+      // Now process images with proper customer info
+      let updatedCustomer = customer;
+      if (originalWorkImage && originalWorkImage.startsWith('data:image/')) {
+        const workImageFilename = await saveBase64Image(
+          originalWorkImage, 
+          'work', 
+          customer.customerId, 
+          customer.workDate.toISOString()
+        );
+        updatedCustomer = await storage.updateCustomer(customer.id, { workImage: workImageFilename }) || customer;
+      }
+      
+      if (originalCustomerImage && originalCustomerImage.startsWith('data:image/')) {
+        const customerImageFilename = await saveBase64Image(
+          originalCustomerImage, 
+          'customer', 
+          customer.customerId, 
+          customer.workDate.toISOString()
+        );
+        updatedCustomer = await storage.updateCustomer(updatedCustomer.id, { customerImage: customerImageFilename }) || updatedCustomer;
+      }
+      
+      res.status(201).json(updatedCustomer);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ 
@@ -194,15 +231,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid customer ID" });
       }
 
+      // Get existing customer info for proper file naming
+      const existingCustomer = await storage.getCustomer(id);
+      if (!existingCustomer) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+
       const data = req.body;
       
       // Process images if they are base64 strings
       if (data.workImage && data.workImage.startsWith('data:image/')) {
-        data.workImage = await saveBase64Image(data.workImage, 'work');
+        data.workImage = await saveBase64Image(
+          data.workImage, 
+          'work', 
+          existingCustomer.customerId, 
+          (data.workDate || existingCustomer.workDate).toString()
+        );
       }
       
       if (data.customerImage && data.customerImage.startsWith('data:image/')) {
-        data.customerImage = await saveBase64Image(data.customerImage, 'customer');
+        data.customerImage = await saveBase64Image(
+          data.customerImage, 
+          'customer', 
+          existingCustomer.customerId, 
+          (data.workDate || existingCustomer.workDate).toString()
+        );
       }
 
       const validatedData = insertCustomerSchema.partial().parse(data);
@@ -239,12 +292,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Check if files exist in uploads folder
-      for (const filename of imageFiles) {
+      Array.from(imageFiles).forEach(filename => {
         const filepath = path.join(uploadsDir, filename);
         if (!fs.existsSync(filepath)) {
           missingFiles.push(filename);
         }
-      }
+      });
       
       // Get actual files in uploads folder
       const actualFiles = fs.readdirSync(uploadsDir).filter(file => 
