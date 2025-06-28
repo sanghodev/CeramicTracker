@@ -29,8 +29,8 @@ export const insertCustomerSchema = createInsertSchema(customers).omit({
   createdAt: true,
 }).extend({
   workDate: z.string().transform((str) => new Date(str)),
-  workImage: z.string().optional(),
-  customerImage: z.string().optional(),
+  workImage: z.string().nullable().optional(),
+  customerImage: z.string().nullable().optional(),
 });
 
 export type InsertCustomer = z.infer<typeof insertCustomerSchema>;

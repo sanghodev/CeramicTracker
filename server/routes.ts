@@ -31,25 +31,38 @@ const upload = multer({
   }
 });
 
-// Helper function to save base64 image with structured naming
+// Helper function to save base64 image with structured naming and folder organization
 async function saveBase64Image(base64Data: string, type: 'work' | 'customer', customerId?: string, workDate?: string): Promise<string> {
   // Remove data URL prefix if present
   const base64String = base64Data.replace(/^data:image\/[a-z]+;base64,/, '');
   const buffer = Buffer.from(base64String, 'base64');
   
-  // Create structured filename: CustomerID_WorkDate_Type_Timestamp.jpg
+  // Create structured filename and folder structure
   let filename: string;
+  let subDir = '';
+  
   if (customerId && workDate) {
     const date = new Date(workDate);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
     const dateStr = date.toISOString().split('T')[0].replace(/-/g, ''); // YYYYMMDD
     const timestamp = Date.now();
+    
+    // Create year/month subdirectory
+    subDir = `${year}/${month}`;
+    const fullSubDir = path.join(uploadsDir, subDir);
+    if (!fs.existsSync(fullSubDir)) {
+      fs.mkdirSync(fullSubDir, { recursive: true });
+    }
+    
     filename = `${customerId}_${dateStr}_${type}_${timestamp}.jpg`;
   } else {
     // Fallback to UUID if customerId/workDate not available
     filename = `${type}_${uuidv4()}.jpg`;
   }
   
-  const filepath = path.join(uploadsDir, filename);
+  const relativePath = subDir ? path.join(subDir, filename) : filename;
+  const filepath = path.join(uploadsDir, relativePath);
   
   // Optimize and save image using sharp
   await sharp(buffer)
@@ -57,7 +70,7 @@ async function saveBase64Image(base64Data: string, type: 'work' | 'customer', cu
     .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
     .toFile(filepath);
   
-  return filename;
+  return relativePath; // Return relative path from uploads folder
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
