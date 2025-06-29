@@ -126,6 +126,11 @@ Key customer fields include:
 
 ## Changelog
 - June 29, 2025. Initial setup
+- June 29, 2025. Enhanced image recognition and matching system:
+  - Improved phone number recognition (Korean 010-XXXX-XXXX, US, international formats)
+  - Advanced image matching with edge detection, texture analysis, and shape recognition
+  - Optimized matching thresholds and accuracy display (75%+ Excellent, 60%+ Good, 45%+ Fair)
+  - Integrated Google Vision API for text recognition
 
 ## User Preferences
 
