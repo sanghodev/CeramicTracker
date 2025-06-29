@@ -120,6 +120,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get customers with pagination and filtering
+  app.get("/api/customers/paginated", async (req, res) => {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const filter = {
+        dateRange: req.query.dateRange as 'today' | 'week' | 'month' | 'all' | undefined,
+        status: req.query.status as string,
+        programType: req.query.programType as string,
+        search: req.query.search as string
+      };
+
+      // Remove undefined values
+      Object.keys(filter).forEach(key => {
+        if (!filter[key as keyof typeof filter]) {
+          delete filter[key as keyof typeof filter];
+        }
+      });
+
+      const result = await storage.getCustomersPaginated(page, limit, filter);
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching paginated customers:", error);
+      res.status(500).json({ message: "Failed to fetch customers" });
+    }
+  });
+
+  // Get today's customers for registration view
+  app.get("/api/customers/today", async (_req, res) => {
+    try {
+      const customers = await storage.getTodayCustomers();
+      res.json(customers);
+    } catch (error) {
+      console.error("Error fetching today's customers:", error);
+      res.status(500).json({ message: "Failed to fetch today's customers" });
+    }
+  });
+
   // Search customers
   app.get("/api/customers/search", async (req, res) => {
     try {

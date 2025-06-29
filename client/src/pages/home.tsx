@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Camera, Users, Menu } from "lucide-react";
 import CameraCapture from "@/components/camera-capture";
 import CustomerForm from "@/components/customer-form";
-import CustomerList from "@/components/customer-list";
+import TodayCustomerList from "@/components/today-customer-list";
 
 export default function Home() {
   const [extractedData, setExtractedData] = useState<any>(null);
@@ -59,8 +59,8 @@ export default function Home() {
           />
         )}
 
-        {/* Customer List Section */}
-        <CustomerList />
+        {/* Today's Customer List Section */}
+        <TodayCustomerList />
       </main>
     </div>
   );
