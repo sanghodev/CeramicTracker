@@ -159,6 +159,9 @@ function parseExtractedText(text: string): ExtractedData {
     return data;
   }
   
+  // Debug: log the extracted text
+  console.log('OCR Extracted Text:', text);
+  
   // Split into lines for line-by-line analysis
   const lines = text.split(/[\n\r]+/).map(line => line.trim()).filter(line => line.length > 0);
   
@@ -169,18 +172,21 @@ function parseExtractedText(text: string): ExtractedData {
   for (const line of lines) {
     const cleanLine = line.trim();
     
-    // Name extraction - look for "Name:" followed by text
-    if (/^name\s*:?\s*/i.test(cleanLine)) {
-      const nameMatch = cleanLine.match(/^name\s*:?\s*(.+)/i);
-      if (nameMatch && nameMatch[1]) {
-        let potentialName = nameMatch[1].trim();
+    // Enhanced Name extraction - look for various name patterns and labels
+    if (/^(name|이름|성명|名前|nombre)\s*:?\s*/i.test(cleanLine)) {
+      const nameMatch = cleanLine.match(/^(name|이름|성명|名前|nombre)\s*:?\s*(.+)/i);
+      if (nameMatch && nameMatch[2]) {
+        let potentialName = nameMatch[2].trim();
         
         // Remove common OCR artifacts and labels
-        potentialName = potentialName.replace(/^(name|名前|이름)\s*:?\s*/i, '').trim();
+        potentialName = potentialName.replace(/^(name|이름|성명|名前|nombre)\s*:?\s*/i, '').trim();
         
-        // Validate it looks like a name (letters and spaces, reasonable length)
-        // Also exclude single words that might be labels
-        if (/^[a-zA-Z\s]{2,50}$/.test(potentialName) && potentialName.split(' ').length >= 1 && potentialName.toLowerCase() !== 'name') {
+        // Enhanced validation for Korean, English, and mixed names
+        // Allow Korean characters, English letters, spaces, dots, hyphens
+        if (/^[a-zA-Z가-힣\s\.\-]{1,50}$/.test(potentialName) && 
+            potentialName.length >= 1 && 
+            potentialName.toLowerCase() !== 'name' &&
+            !potentialName.match(/^(phone|email|date|tel|mobile)$/i)) {
           data.name = potentialName;
         }
       }
@@ -289,18 +295,33 @@ function parseExtractedText(text: string): ExtractedData {
   }
   
   if (!data.name) {
-    // Look for potential names (sequences of 2-4 words with only letters)
+    // Enhanced fallback name detection for Korean and English names
     for (const line of lines) {
-      if (!/[\d@#:()]/.test(line)) { // Skip lines with numbers, symbols
-        const words = line.split(/\s+/).filter(word => /^[a-zA-Z]+$/.test(word) && word.toLowerCase() !== 'name');
-        if (words.length >= 2 && words.length <= 4) {
+      // Skip lines with numbers, symbols, or form labels
+      if (!/[\d@#:()]/.test(line) && 
+          !line.toLowerCase().match(/^(phone|tel|email|date|mobile|cell|address|주소|전화|이메일)/)) {
+        
+        // Check for Korean names (1-5 characters)
+        const koreanMatch = line.match(/([가-힣]{1,5})/);
+        if (koreanMatch && koreanMatch[1].length >= 2) {
+          const koreanName = koreanMatch[1].trim();
+          if (koreanName.length >= 2 && koreanName.length <= 5 && 
+              !koreanName.match(/(이름|성명|전화|번호|주소|이메일)/)) {
+            data.name = koreanName;
+            break;
+          }
+        }
+        
+        // Check for English names (2-4 words)
+        const words = line.split(/\s+/).filter(word => 
+          /^[a-zA-Z]+$/.test(word) && 
+          word.length >= 2 && 
+          !word.toLowerCase().match(/^(name|phone|email|date|tel|mobile|cell)$/)
+        );
+        
+        if (words.length >= 1 && words.length <= 4) {
           const potentialName = words.join(' ');
-          // Additional filtering to exclude common form labels
-          if (potentialName.length >= 4 && potentialName.length <= 50 && 
-              !potentialName.toLowerCase().includes('name') &&
-              !potentialName.toLowerCase().includes('phone') &&
-              !potentialName.toLowerCase().includes('email') &&
-              !potentialName.toLowerCase().includes('date')) {
+          if (potentialName.length >= 2 && potentialName.length <= 50) {
             data.name = potentialName;
             break;
           }
@@ -308,6 +329,9 @@ function parseExtractedText(text: string): ExtractedData {
       }
     }
   }
+  
+  // Debug: log the final parsed data
+  console.log('OCR Parsed Data:', data);
   
   return data;
 }
