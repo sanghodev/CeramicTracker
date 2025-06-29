@@ -225,7 +225,7 @@ export default function ImageSearch() {
           if (imageUrl) {
             const similarity = await compareImages(capturedImage, imageUrl);
 
-            if (similarity > 0.35) { // Raised threshold to 35% to filter out poor matches
+            if (similarity > 0.30) { // Optimized threshold for enhanced pattern matching
               matches.push({
                 customer,
                 similarity,
@@ -644,10 +644,17 @@ export default function ImageSearch() {
   };
 
   const getMatchBadgeVariant = (similarity: number): "default" | "secondary" | "destructive" | "outline" => {
-    if (similarity >= 0.9) return 'default'; // Perfect match - green
-    if (similarity >= 0.7) return 'secondary'; // Good match - blue
-    if (similarity >= 0.5) return 'outline'; // Fair match - gray
-    return 'destructive'; // Poor match - red
+    if (similarity >= 0.75) return 'default'; // Excellent match - blue (75%+)
+    if (similarity >= 0.60) return 'secondary'; // Good match - gray (60-74%)
+    if (similarity >= 0.45) return 'outline'; // Fair match - outlined (45-59%)
+    return 'destructive'; // Poor match - red (30-44%)
+  };
+
+  const getMatchDescription = (similarity: number) => {
+    if (similarity >= 0.75) return 'Excellent Match';
+    if (similarity >= 0.60) return 'Good Match';
+    if (similarity >= 0.45) return 'Fair Match';
+    return 'Possible Match';
   };
 
   const resetSearch = () => {
@@ -857,7 +864,7 @@ export default function ImageSearch() {
                             {getStatusText(match.customer.status)}
                           </Badge>
                           <Badge variant={getMatchBadgeVariant(match.similarity)}>
-                            {Math.round(match.similarity * 100)}% Match
+                            {Math.round(match.similarity * 100)}% - {getMatchDescription(match.similarity)}
                           </Badge>
                           <Badge variant="outline">
                             {match.matchType === 'customer' ? 'Customer Photo' : 'Artwork Photo'}
