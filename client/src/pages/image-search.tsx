@@ -209,7 +209,7 @@ export default function ImageSearch() {
           if (imageUrl) {
             const similarity = await compareImages(capturedImage, imageUrl);
 
-            if (similarity > 0.35) { // Raised threshold to 35% to filter out poor matches
+            if (similarity > 0.30) { // Optimized threshold for enhanced pattern matching
               matches.push({
                 customer,
                 similarity,
@@ -322,12 +322,20 @@ export default function ImageSearch() {
         
 
         
-        // Weighted combination of different similarities
+        // Enhanced pattern matching
+        const edgeSimilarity = compareEdgePatterns(data1, data2, size);
+        const textureSimilarity = compareTexture(data1, data2, size);
+        const shapeSimilarity = compareShapes(data1, data2, size);
+        
+        // Advanced weighted combination emphasizing pattern and shape recognition
         const combinedSimilarity = (
-          histogramSimilarity * 0.25 +
-          Math.max(0, structuralSimilarity) * 0.15 + // Ignore negative structural scores
-          colorSimilarity * 0.35 +
-          pixelSimilarity * 0.25
+          histogramSimilarity * 0.15 +          // Color distribution 
+          Math.max(0, structuralSimilarity) * 0.10 + // Overall structure
+          colorSimilarity * 0.20 +               // Average colors
+          pixelSimilarity * 0.15 +               // Direct pixel comparison
+          edgeSimilarity * 0.25 +                // Edge patterns (critical for ceramics)
+          textureSimilarity * 0.10 +             // Surface texture
+          shapeSimilarity * 0.05                 // Basic shape detection
         );
         
         resolve(Math.max(0, Math.min(1, combinedSimilarity)));
@@ -439,6 +447,157 @@ export default function ImageSearch() {
         // Convert distance to similarity (0-1)
         const maxDistance = Math.sqrt(3 * 255 * 255);
         return 1 - (colorDistance / maxDistance);
+      };
+      
+      // Edge pattern comparison for detecting shapes and outlines
+      const compareEdgePatterns = (data1: Uint8ClampedArray, data2: Uint8ClampedArray, size: number): number => {
+        const edges1 = detectEdges(data1, size);
+        const edges2 = detectEdges(data2, size);
+        
+        let matchingEdges = 0;
+        let totalEdges = 0;
+        
+        for (let i = 0; i < edges1.length; i++) {
+          if (edges1[i] > 50 || edges2[i] > 50) { // Consider as edge if above threshold
+            totalEdges++;
+            const edgeDiff = Math.abs(edges1[i] - edges2[i]);
+            if (edgeDiff < 100) { // Similar edge strength
+              matchingEdges++;
+            }
+          }
+        }
+        
+        return totalEdges > 0 ? matchingEdges / totalEdges : 0;
+      };
+      
+      // Simple edge detection using Sobel-like operator
+      const detectEdges = (data: Uint8ClampedArray, size: number): number[] => {
+        const edges = new Array(size * size).fill(0);
+        
+        for (let y = 1; y < size - 1; y++) {
+          for (let x = 1; x < size - 1; x++) {
+            const idx = (y * size + x) * 4;
+            
+            // Convert to grayscale
+            const center = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+            
+            // Get surrounding pixels
+            const left = 0.299 * data[idx - 4] + 0.587 * data[idx - 3] + 0.114 * data[idx - 2];
+            const right = 0.299 * data[idx + 4] + 0.587 * data[idx + 5] + 0.114 * data[idx + 6];
+            const top = 0.299 * data[idx - size * 4] + 0.587 * data[idx - size * 4 + 1] + 0.114 * data[idx - size * 4 + 2];
+            const bottom = 0.299 * data[idx + size * 4] + 0.587 * data[idx + size * 4 + 1] + 0.114 * data[idx + size * 4 + 2];
+            
+            // Simple edge detection
+            const gx = Math.abs(right - left);
+            const gy = Math.abs(bottom - top);
+            const magnitude = Math.sqrt(gx * gx + gy * gy);
+            
+            edges[y * size + x] = magnitude;
+          }
+        }
+        
+        return edges;
+      };
+      
+      // Texture comparison for surface patterns
+      const compareTexture = (data1: Uint8ClampedArray, data2: Uint8ClampedArray, size: number): number => {
+        const texture1 = calculateTexture(data1, size);
+        const texture2 = calculateTexture(data2, size);
+        
+        // Compare texture features
+        const contrastDiff = Math.abs(texture1.contrast - texture2.contrast) / 255;
+        const homogeneityDiff = Math.abs(texture1.homogeneity - texture2.homogeneity);
+        const energyDiff = Math.abs(texture1.energy - texture2.energy);
+        
+        const avgDiff = (contrastDiff + homogeneityDiff + energyDiff) / 3;
+        return Math.max(0, 1 - avgDiff);
+      };
+      
+      // Calculate texture features
+      const calculateTexture = (data: Uint8ClampedArray, size: number) => {
+        let contrast = 0;
+        let homogeneity = 0;
+        let energy = 0;
+        let count = 0;
+        
+        for (let y = 0; y < size - 1; y++) {
+          for (let x = 0; x < size - 1; x++) {
+            const idx1 = (y * size + x) * 4;
+            const idx2 = (y * size + (x + 1)) * 4;
+            const idx3 = ((y + 1) * size + x) * 4;
+            
+            const gray1 = 0.299 * data[idx1] + 0.587 * data[idx1 + 1] + 0.114 * data[idx1 + 2];
+            const gray2 = 0.299 * data[idx2] + 0.587 * data[idx2 + 1] + 0.114 * data[idx2 + 2];
+            const gray3 = 0.299 * data[idx3] + 0.587 * data[idx3 + 1] + 0.114 * data[idx3 + 2];
+            
+            const diff1 = Math.abs(gray1 - gray2);
+            const diff2 = Math.abs(gray1 - gray3);
+            
+            contrast += (diff1 + diff2) / 2;
+            homogeneity += 1 / (1 + (diff1 + diff2) / 2);
+            energy += Math.pow((gray1 + gray2 + gray3) / 3, 2);
+            count++;
+          }
+        }
+        
+        return {
+          contrast: contrast / count,
+          homogeneity: homogeneity / count,
+          energy: Math.sqrt(energy / count) / 255
+        };
+      };
+      
+      // Basic shape comparison using moments
+      const compareShapes = (data1: Uint8ClampedArray, data2: Uint8ClampedArray, size: number): number => {
+        const moments1 = calculateMoments(data1, size);
+        const moments2 = calculateMoments(data2, size);
+        
+        // Compare centralized moments (shape descriptors)
+        const m1Diff = Math.abs(moments1.m20 - moments2.m20);
+        const m2Diff = Math.abs(moments1.m02 - moments2.m02);
+        const m3Diff = Math.abs(moments1.m11 - moments2.m11);
+        
+        const avgDiff = (m1Diff + m2Diff + m3Diff) / 3;
+        return Math.max(0, 1 - (avgDiff / 10000)); // Normalize by expected range
+      };
+      
+      // Calculate image moments for shape analysis
+      const calculateMoments = (data: Uint8ClampedArray, size: number) => {
+        let m00 = 0, m10 = 0, m01 = 0;
+        
+        // Calculate basic moments
+        for (let y = 0; y < size; y++) {
+          for (let x = 0; x < size; x++) {
+            const idx = (y * size + x) * 4;
+            const gray = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+            
+            m00 += gray;
+            m10 += x * gray;
+            m01 += y * gray;
+          }
+        }
+        
+        // Calculate centroids
+        const cx = m00 > 0 ? m10 / m00 : 0;
+        const cy = m00 > 0 ? m01 / m00 : 0;
+        
+        // Calculate central moments
+        let m20 = 0, m02 = 0, m11 = 0;
+        for (let y = 0; y < size; y++) {
+          for (let x = 0; x < size; x++) {
+            const idx = (y * size + x) * 4;
+            const gray = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+            
+            const dx = x - cx;
+            const dy = y - cy;
+            
+            m20 += dx * dx * gray;
+            m02 += dy * dy * gray;
+            m11 += dx * dy * gray;
+          }
+        }
+        
+        return { m20, m02, m11 };
       };
       
       image1.onload = () => {

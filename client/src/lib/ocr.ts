@@ -186,14 +186,30 @@ function parseExtractedText(text: string): ExtractedData {
       }
     }
     
-    // Phone extraction - look for "Phone" or "Phone#:" followed by numbers
-    if (/^phone\s*#?\s*:?\s*/i.test(cleanLine)) {
-      const phoneMatch = cleanLine.match(/^phone\s*#?\s*:?\s*(.+)/i);
-      if (phoneMatch && phoneMatch[1]) {
-        const phoneText = phoneMatch[1].trim();
-        const digits = phoneText.replace(/\D/g, '');
-        if (digits.length === 10) {
+    // Enhanced Phone extraction - look for various phone patterns and labels
+    if (/^(phone|tel|mobile|cell|휴대폰|전화|핸드폰)\s*#?\s*:?\s*/i.test(cleanLine)) {
+      const phoneMatch = cleanLine.match(/^(phone|tel|mobile|cell|휴대폰|전화|핸드폰)\s*#?\s*:?\s*(.+)/i);
+      if (phoneMatch && phoneMatch[2]) {
+        const phoneText = phoneMatch[2].trim();
+        // Extract all digits including Korean and international formats
+        const digits = phoneText.replace(/[^\d]/g, '');
+        
+        // Handle various phone number formats
+        if (digits.length === 11 && digits.startsWith('010')) {
+          // Korean mobile format: 010-XXXX-XXXX
+          data.phone = `${digits.slice(0,3)}-${digits.slice(3,7)}-${digits.slice(7)}`;
+        } else if (digits.length === 10) {
+          // US format: (XXX) XXX-XXXX
           data.phone = `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
+        } else if (digits.length >= 8 && digits.length <= 12) {
+          // Generic format with dashes every 3-4 digits
+          if (digits.length === 8) {
+            data.phone = `${digits.slice(0,4)}-${digits.slice(4)}`;
+          } else if (digits.length === 9) {
+            data.phone = `${digits.slice(0,3)}-${digits.slice(3,6)}-${digits.slice(6)}`;
+          } else {
+            data.phone = phoneText; // Keep original format if not standard
+          }
         }
       }
     }
@@ -230,14 +246,36 @@ function parseExtractedText(text: string): ExtractedData {
     }
   }
   
-  // Fallback: if no labeled data found, try to extract from anywhere in text
+  // Enhanced fallback phone number extraction
   if (!data.phone) {
-    const phonePattern = /(\d{3}[\s.-]?\d{3}[\s.-]?\d{4})/;
-    const phoneMatch = singleLineText.match(phonePattern);
-    if (phoneMatch) {
-      const digits = phoneMatch[1].replace(/\D/g, '');
-      if (digits.length === 10) {
-        data.phone = `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
+    // Multiple phone number patterns to try
+    const phonePatterns = [
+      /010[-\s]?\d{4}[-\s]?\d{4}/g,  // Korean mobile: 010-XXXX-XXXX
+      /\b\d{3}[-\s]?\d{4}[-\s]?\d{4}\b/g,  // Generic: XXX-XXXX-XXXX
+      /\b\d{3}[-\s]?\d{3}[-\s]?\d{4}\b/g,  // US: XXX-XXX-XXXX
+      /\(\d{3}\)\s?\d{3}[-\s]?\d{4}/g,     // US: (XXX) XXX-XXXX
+      /\b\d{10,11}\b/g                      // Plain digits 10-11 long
+    ];
+    
+    for (const pattern of phonePatterns) {
+      const matches = singleLineText.match(pattern);
+      if (matches) {
+        for (const match of matches) {
+          const digits = match.replace(/[^\d]/g, '');
+          
+          // Validate and format based on length
+          if (digits.length === 11 && digits.startsWith('010')) {
+            data.phone = `${digits.slice(0,3)}-${digits.slice(3,7)}-${digits.slice(7)}`;
+            break;
+          } else if (digits.length === 10) {
+            data.phone = `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
+            break;
+          } else if (digits.length === 8 || digits.length === 9) {
+            data.phone = match.trim(); // Keep original format
+            break;
+          }
+        }
+        if (data.phone) break;
       }
     }
   }
