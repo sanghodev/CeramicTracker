@@ -356,6 +356,18 @@ export default function PaginatedCustomerList() {
                         </div>
                       )}
                     </div>
+
+                    {/* Edit Button */}
+                    <div className="flex-shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditCustomer(customer)}
+                        className="h-8 px-2"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}

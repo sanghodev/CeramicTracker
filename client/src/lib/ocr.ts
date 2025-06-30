@@ -287,10 +287,23 @@ function parseExtractedText(text: string): ExtractedData {
   }
   
   if (!data.email) {
-    const emailPattern = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/;
-    const emailMatch = singleLineText.match(emailPattern);
-    if (emailMatch) {
-      data.email = emailMatch[1];
+    // Enhanced email pattern to catch common email formats
+    const emailPatterns = [
+      /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g,  // Standard email
+      /([a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g,   // With underscore and percent
+      /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9-]+\.[a-zA-Z]{2,4})/g  // Common domains
+    ];
+    
+    for (const pattern of emailPatterns) {
+      const emailMatch = singleLineText.match(pattern);
+      if (emailMatch && emailMatch[0]) {
+        // Validate the email format
+        const email = emailMatch[0].toLowerCase();
+        if (isValidEmail(email)) {
+          data.email = email;
+          break;
+        }
+      }
     }
   }
   
