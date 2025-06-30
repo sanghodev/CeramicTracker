@@ -165,12 +165,12 @@ export default function PaginatedCustomerList() {
                 </SelectContent>
               </Select>
 
-              <Select value={status} onValueChange={setStatus}>
+              <Select value={status || "all_statuses"} onValueChange={(value) => setStatus(value === "all_statuses" ? "" : value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Statuses</SelectItem>
+                  <SelectItem value="all_statuses">All Statuses</SelectItem>
                   <SelectItem value="waiting">Waiting</SelectItem>
                   <SelectItem value="in_progress">In Progress</SelectItem>
                   <SelectItem value="ready">Ready</SelectItem>
@@ -178,12 +178,12 @@ export default function PaginatedCustomerList() {
                 </SelectContent>
               </Select>
 
-              <Select value={programType} onValueChange={setProgramType}>
+              <Select value={programType || "all_programs"} onValueChange={(value) => setProgramType(value === "all_programs" ? "" : value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Program Type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Programs</SelectItem>
+                  <SelectItem value="all_programs">All Programs</SelectItem>
                   <SelectItem value="painting">Painting</SelectItem>
                   <SelectItem value="one_time_ceramic">One-time Ceramic</SelectItem>
                   <SelectItem value="advanced_ceramic">Advanced Ceramic</SelectItem>
