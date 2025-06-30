@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { 
   Search, 
   Filter, 
@@ -10,7 +10,9 @@ import {
   Clock,
   Phone,
   Mail,
-  Package
+  Package,
+  Edit,
+  X
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ImageZoom } from "@/components/ui/image-zoom";
 import { getImageUrl } from "@/lib/image-utils";
 import { apiRequest } from "@/lib/queryClient";
+import CustomerForm from "@/components/customer-form";
 import type { Customer } from "@shared/schema";
 
 interface PaginatedResult {
@@ -32,11 +35,13 @@ interface PaginatedResult {
 }
 
 export default function PaginatedCustomerList() {
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [dateRange, setDateRange] = useState("all");
   const [status, setStatus] = useState("");
   const [programType, setProgramType] = useState("");
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const limit = 15; // Compact list for better performance
 
   const { data: result, isLoading, error } = useQuery({
@@ -102,6 +107,20 @@ export default function PaginatedCustomerList() {
     setPage(1); // Reset to first page when searching
   };
 
+  const handleEditCustomer = (customer: Customer) => {
+    setEditingCustomer(customer);
+  };
+
+  const handleEditCancel = () => {
+    setEditingCustomer(null);
+  };
+
+  const handleEditSubmit = () => {
+    setEditingCustomer(null);
+    // Refresh the data
+    queryClient.invalidateQueries({ queryKey: ["/api/customers/paginated"] });
+  };
+
   if (error) {
     return (
       <Card>
@@ -115,6 +134,35 @@ export default function PaginatedCustomerList() {
           </div>
         </CardContent>
       </Card>
+    );
+  }
+
+  // Show edit form if editing
+  if (editingCustomer) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Edit className="h-5 w-5" />
+                Edit Customer: {editingCustomer.name}
+              </CardTitle>
+              <Button onClick={handleEditCancel} variant="outline" size="sm">
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <CustomerForm 
+              initialData={editingCustomer}
+              onSubmitted={handleEditSubmit}
+              onCancelled={handleEditCancel}
+            />
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 

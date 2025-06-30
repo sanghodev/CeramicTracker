@@ -220,11 +220,11 @@ function parseExtractedText(text: string): ExtractedData {
       }
     }
     
-    // Email extraction - look for "Email:" followed by email address
-    if (/^email\s*:?\s*/i.test(cleanLine)) {
-      const emailMatch = cleanLine.match(/^email\s*:?\s*(.+)/i);
-      if (emailMatch && emailMatch[1]) {
-        const emailText = emailMatch[1].trim();
+    // Enhanced Email extraction - look for email patterns anywhere in the line
+    if (/^(email|이메일|e-mail|mail)\s*:?\s*/i.test(cleanLine)) {
+      const emailMatch = cleanLine.match(/^(email|이메일|e-mail|mail)\s*:?\s*(.+)/i);
+      if (emailMatch && emailMatch[2]) {
+        const emailText = emailMatch[2].trim();
         const emailPattern = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/;
         const foundEmail = emailText.match(emailPattern);
         if (foundEmail) {
