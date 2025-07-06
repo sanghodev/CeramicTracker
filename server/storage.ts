@@ -213,4 +213,204 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-export const storage = new DatabaseStorage();
+// In-Memory Storage as fallback
+class MemoryStorage implements IStorage {
+  private customers: Customer[] = [];
+  private users: User[] = [];
+  private idCounter = 1;
+
+  async getUser(id: number): Promise<User | undefined> {
+    return this.users.find(u => u.id === id);
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    return this.users.find(u => u.username === username);
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const user: User = {
+      id: this.idCounter++,
+      username: insertUser.username,
+      password: insertUser.password
+    };
+    this.users.push(user);
+    return user;
+  }
+
+  async getCustomer(id: number): Promise<Customer | undefined> {
+    return this.customers.find(c => c.id === id);
+  }
+
+  async getCustomers(): Promise<Customer[]> {
+    return [...this.customers].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getCustomersPaginated(page: number, limit: number, filter?: CustomerFilter): Promise<PaginatedResult<Customer>> {
+    let filteredCustomers = [...this.customers];
+
+    // Apply filters
+    if (filter?.search) {
+      const search = filter.search.toLowerCase();
+      filteredCustomers = filteredCustomers.filter(c =>
+        c.name.toLowerCase().includes(search) ||
+        c.phone.toLowerCase().includes(search) ||
+        c.email?.toLowerCase().includes(search) ||
+        c.customerId?.toLowerCase().includes(search)
+      );
+    }
+
+    if (filter?.status) {
+      filteredCustomers = filteredCustomers.filter(c => c.status === filter.status);
+    }
+
+    if (filter?.programType) {
+      filteredCustomers = filteredCustomers.filter(c => c.programType === filter.programType);
+    }
+
+    if (filter?.dateRange && filter.dateRange !== 'all') {
+      const now = new Date();
+      let startDate = new Date();
+
+      switch (filter.dateRange) {
+        case 'today':
+          startDate.setHours(0, 0, 0, 0);
+          break;
+        case 'week':
+          startDate.setDate(now.getDate() - 7);
+          break;
+        case 'month':
+          startDate.setMonth(now.getMonth() - 1);
+          break;
+      }
+
+      filteredCustomers = filteredCustomers.filter(c => 
+        new Date(c.workDate) >= startDate
+      );
+    }
+
+    // Sort by creation date (newest first)
+    filteredCustomers.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    const total = filteredCustomers.length;
+    const totalPages = Math.ceil(total / limit);
+    const offset = (page - 1) * limit;
+    const data = filteredCustomers.slice(offset, offset + limit);
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages
+    };
+  }
+
+  async getTodayCustomers(): Promise<Customer[]> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    return this.customers.filter(c => {
+      const workDate = new Date(c.workDate);
+      return workDate >= today && workDate < tomorrow;
+    }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async searchCustomers(query: string): Promise<Customer[]> {
+    const search = query.toLowerCase();
+    return this.customers.filter(c =>
+      c.name.toLowerCase().includes(search) ||
+      c.phone.toLowerCase().includes(search) ||
+      c.email?.toLowerCase().includes(search) ||
+      c.customerId?.toLowerCase().includes(search)
+    );
+  }
+
+  async createCustomer(insertCustomer: InsertCustomer): Promise<Customer> {
+    const customer: Customer = {
+      id: this.idCounter++,
+      customerId: insertCustomer.customerId || generateCustomerId(new Date(insertCustomer.workDate), insertCustomer.programType),
+      name: insertCustomer.name,
+      phone: insertCustomer.phone,
+      email: insertCustomer.email || null,
+      workDate: insertCustomer.workDate,
+      status: insertCustomer.status || 'waiting',
+      programType: insertCustomer.programType || 'painting',
+      workImage: insertCustomer.workImage || null,
+      customerImage: insertCustomer.customerImage || null,
+      isGroup: insertCustomer.isGroup || 'false',
+      groupId: insertCustomer.groupId || null,
+      groupSize: insertCustomer.groupSize || null,
+      contactStatus: insertCustomer.contactStatus || 'not_contacted',
+      storageLocation: insertCustomer.storageLocation || null,
+      pickupStatus: insertCustomer.pickupStatus || 'not_picked_up',
+      notes: insertCustomer.notes || null,
+      createdAt: new Date()
+    };
+    this.customers.push(customer);
+    return customer;
+  }
+
+  async updateCustomer(id: number, updates: Partial<InsertCustomer>): Promise<Customer | undefined> {
+    const index = this.customers.findIndex(c => c.id === id);
+    if (index === -1) return undefined;
+
+    this.customers[index] = { ...this.customers[index], ...updates };
+    return this.customers[index];
+  }
+
+  async updateCustomerStatus(id: number, status: string): Promise<Customer | undefined> {
+    const index = this.customers.findIndex(c => c.id === id);
+    if (index === -1) return undefined;
+
+    this.customers[index].status = status;
+    return this.customers[index];
+  }
+}
+
+// Initialize storage with runtime fallback
+async function initializeStorage(): Promise<IStorage> {
+  try {
+    const dbStorage = new DatabaseStorage();
+    // Test database connection
+    await dbStorage.getCustomers();
+    console.log('✓ Database connection successful');
+    return dbStorage;
+  } catch (error) {
+    console.log('⚠ Database not available, using memory storage');
+    console.log('Error:', error.message);
+    return new MemoryStorage();
+  }
+}
+
+// Create storage instance
+let storagePromise: Promise<IStorage> | null = null;
+
+export async function getStorage(): Promise<IStorage> {
+  if (!storagePromise) {
+    storagePromise = initializeStorage();
+  }
+  return storagePromise;
+}
+
+// For backwards compatibility
+export const storage = {
+  async getUser(id: number) { return (await getStorage()).getUser(id); },
+  async getUserByUsername(username: string) { return (await getStorage()).getUserByUsername(username); },
+  async createUser(user: InsertUser) { return (await getStorage()).createUser(user); },
+  async getCustomer(id: number) { return (await getStorage()).getCustomer(id); },
+  async getCustomers() { return (await getStorage()).getCustomers(); },
+  async getCustomersPaginated(page: number, limit: number, filter?: CustomerFilter) { 
+    return (await getStorage()).getCustomersPaginated(page, limit, filter); 
+  },
+  async getTodayCustomers() { return (await getStorage()).getTodayCustomers(); },
+  async searchCustomers(query: string) { return (await getStorage()).searchCustomers(query); },
+  async createCustomer(customer: InsertCustomer) { return (await getStorage()).createCustomer(customer); },
+  async updateCustomer(id: number, updates: Partial<InsertCustomer>) { 
+    return (await getStorage()).updateCustomer(id, updates); 
+  },
+  async updateCustomerStatus(id: number, status: string) { 
+    return (await getStorage()).updateCustomerStatus(id, status); 
+  }
+};
