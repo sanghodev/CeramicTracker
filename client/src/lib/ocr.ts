@@ -14,37 +14,14 @@ export function createManualEntry(): ExtractedData {
   };
 }
 
-// Enhanced phone number formatting for all scenarios
+// Auto-format phone number as user types
 export function formatPhoneNumber(value: string): string {
-  if (!value) return '';
-  
-  const digits = value.replace(/[^\d]/g, '');
+  const digits = value.replace(/\D/g, '');
   
   if (digits.length === 0) return '';
-  if (digits.length === 11 && digits.startsWith('010')) {
-    // Korean mobile format: 010-XXXX-XXXX
-    return `${digits.slice(0,3)}-${digits.slice(3,7)}-${digits.slice(7)}`;
-  } else if (digits.length === 10) {
-    // US format: (XXX) XXX-XXXX
-    return `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
-  } else if (digits.length === 8) {
-    // 8 digit format: XXXX-XXXX
-    return `${digits.slice(0,4)}-${digits.slice(4)}`;
-  } else if (digits.length === 9) {
-    // 9 digit format: XXX-XXX-XXX
-    return `${digits.slice(0,3)}-${digits.slice(3,6)}-${digits.slice(6)}`;
-  } else if (digits.length <= 3) {
-    return digits;
-  } else if (digits.length <= 6) {
-    return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
-  } else if (digits.length <= 10) {
-    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-  } else if (digits.length >= 8 && digits.length <= 12) {
-    // Keep original if reasonable length
-    return value.trim();
-  }
-  
-  return '';
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
 }
 
 // Validate email format
@@ -69,229 +46,6 @@ export function getSuggestedDates(): { label: string; value: string }[] {
   ];
   
   return suggestions;
-}
-
-// Advanced text preprocessing for better OCR recognition
-function preprocessTextForRecognition(text: string): string {
-  return text
-    // Fix common OCR character confusions
-    .replace(/[Il1|]/g, 'I')      // I/l/1/| confusion
-    .replace(/[O0]/g, 'O')        // O/0 confusion
-    .replace(/[5S]/g, 'S')        // S/5 confusion
-    .replace(/[6G]/g, 'G')        // G/6 confusion
-    .replace(/[B8]/g, 'B')        // B/8 confusion
-    .replace(/[Z2]/g, 'Z')        // Z/2 confusion
-    .replace(/[rn]/g, 'n')        // r/n confusion in lowercase
-    .replace(/[cl]/g, 'c')        // c/l confusion
-    // Fix spacing issues
-    .replace(/\s+/g, ' ')         // Multiple spaces to single space
-    .replace(/([a-zA-Z])(\d)/g, '$1 $2')  // Add space between letters and numbers
-    .replace(/(\d)([a-zA-Z])/g, '$1 $2')  // Add space between numbers and letters
-    .trim();
-}
-
-// Advanced name recognition with partial occlusion handling
-function extractNameIntelligently(text: string, lines: string[]): string {
-  // Method 1: Look for explicit name labels with partial text
-  const namePatterns = [
-    /(?:ame|name|이름|성명|名前|nombre)\s*:?\s*([a-zA-Z가-힣\s\.\-]{1,50})/i,
-    /(?:성명|이름)\s*:?\s*([a-zA-Z가-힣\s\.\-]{1,50})/i,
-    /(?:Name|NAME)\s*:?\s*([a-zA-Z가-힣\s\.\-]{1,50})/i,
-    /(?:ame|이름)\s*:?\s*([a-zA-Z가-힣\s\.\-]{1,50})/i,  // 'N' missing
-    /(?:name|ame)\s*:?\s*([a-zA-Z가-힣\s\.\-]{1,50})/i,  // 'N' missing
-  ];
-  
-  for (const pattern of namePatterns) {
-    const match = text.match(pattern);
-    if (match && match[1]) {
-      let name = match[1].trim();
-      // Clean up the name
-      name = name.replace(/^(name|ame|이름|성명|名前|nombre)\s*:?\s*/i, '').trim();
-      if (name.length > 0 && name.length <= 50 && 
-          !name.match(/^(phone|email|date|tel|mobile|010)$/i)) {
-        return name;
-      }
-    }
-  }
-  
-  // Method 2: Look for capitalized words that look like names
-  const capitalizedWordsPattern = /\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b/g;
-  const capitalizedWords = text.match(capitalizedWordsPattern);
-  if (capitalizedWords) {
-    for (const word of capitalizedWords) {
-      if (word.length >= 2 && word.length <= 50 && 
-          !word.match(/^(Name|Phone|Email|Date|Tel|Mobile|January|February|March|April|May|June|July|August|September|October|November|December|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$/i)) {
-        return word;
-      }
-    }
-  }
-  
-  // Method 3: Look for Korean names
-  const koreanNamePattern = /[가-힣]{2,4}/g;
-  const koreanNames = text.match(koreanNamePattern);
-  if (koreanNames) {
-    for (const name of koreanNames) {
-      if (name.length >= 2 && name.length <= 4) {
-        return name;
-      }
-    }
-  }
-  
-  // Method 4: Line-by-line analysis for names after labels
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    // Check if this line contains a name label
-    if (/(?:name|ame|이름|성명)/i.test(line)) {
-      // Check current line for name after label
-      const afterLabel = line.replace(/^.*(?:name|ame|이름|성명)\s*:?\s*/i, '').trim();
-      if (afterLabel.length > 0 && afterLabel.length <= 50) {
-        return afterLabel;
-      }
-      // Check next line for name
-      if (i + 1 < lines.length) {
-        const nextLine = lines[i + 1].trim();
-        if (nextLine.length > 0 && nextLine.length <= 50 && 
-            !nextLine.match(/^(phone|email|date|tel|mobile|010)/i)) {
-          return nextLine;
-        }
-      }
-    }
-  }
-  
-  return '';
-}
-
-// Advanced phone number recognition with complete occlusion handling
-function extractPhoneIntelligently(text: string, lines: string[]): string {
-  // Method 1: Look for phone labels with partial text
-  const phonePatterns = [
-    /(?:hone|phone|tel|mobile|cell|휴대폰|전화|핸드폰|연락처)\s*#?\s*:?\s*([0-9\-\(\)\s\+]{8,20})/i,
-    /(?:phone|hone|tel|mobile|cell|휴대폰|전화|핸드폰)\s*#?\s*:?\s*([0-9\-\(\)\s\+]{8,20})/i,
-    /(?:Tel|TEL|Phone|PHONE)\s*#?\s*:?\s*([0-9\-\(\)\s\+]{8,20})/i,
-  ];
-  
-  for (const pattern of phonePatterns) {
-    const match = text.match(pattern);
-    if (match && match[1]) {
-      const phoneText = match[1].trim();
-      const formatted = formatPhoneNumber(phoneText);
-      if (formatted) return formatted;
-    }
-  }
-  
-  // Method 2: Look for phone number patterns without labels
-  const phoneNumberPatterns = [
-    /010[-\s]?\d{4}[-\s]?\d{4}/g,           // Korean mobile
-    /\+82[-\s]?10[-\s]?\d{4}[-\s]?\d{4}/g,  // Korean international
-    /\b\d{3}[-\s]?\d{4}[-\s]?\d{4}\b/g,     // XXX-XXXX-XXXX
-    /\b\d{3}[-\s]?\d{3}[-\s]?\d{4}\b/g,     // XXX-XXX-XXXX
-    /\(\d{3}\)\s?\d{3}[-\s]?\d{4}/g,        // (XXX) XXX-XXXX
-    /\b\d{10,11}\b/g                        // 10-11 digit numbers
-  ];
-  
-  for (const pattern of phoneNumberPatterns) {
-    const matches = text.match(pattern);
-    if (matches) {
-      for (const match of matches) {
-        const digits = match.replace(/[^\d]/g, '');
-        if (digits.length >= 8 && digits.length <= 11) {
-          return formatPhoneNumber(match);
-        }
-      }
-    }
-  }
-  
-  // Method 3: Line-by-line analysis for phone numbers
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    // Check if this line contains a phone label
-    if (/(?:phone|hone|tel|mobile|cell|휴대폰|전화|핸드폰)/i.test(line)) {
-      // Check current line for phone after label
-      const afterLabel = line.replace(/^.*(?:phone|hone|tel|mobile|cell|휴대폰|전화|핸드폰)\s*#?\s*:?\s*/i, '').trim();
-      if (afterLabel) {
-        const formatted = formatPhoneNumber(afterLabel);
-        if (formatted) return formatted;
-      }
-      // Check next line for phone
-      if (i + 1 < lines.length) {
-        const nextLine = lines[i + 1].trim();
-        const formatted = formatPhoneNumber(nextLine);
-        if (formatted) return formatted;
-      }
-    }
-  }
-  
-  // Method 4: Look for any sequence of digits that could be a phone number
-  const digitSequences = text.match(/\d{8,11}/g);
-  if (digitSequences) {
-    for (const sequence of digitSequences) {
-      if (sequence.length >= 8 && sequence.length <= 11) {
-        return formatPhoneNumber(sequence);
-      }
-    }
-  }
-  
-  return '';
-}
-
-// Enhanced email recognition with multi-line concatenation
-function extractEmailIntelligently(text: string, lines: string[]): string {
-  // Method 1: Look for complete emails in single line
-  const emailPatterns = [
-    /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g,
-    /([a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g,
-    /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9-]+\.[a-zA-Z]{2,4})/g,
-  ];
-  
-  for (const pattern of emailPatterns) {
-    const matches = text.match(pattern);
-    if (matches) {
-      for (const match of matches) {
-        const email = match.toLowerCase().trim();
-        if (isValidEmail(email)) {
-          return email;
-        }
-      }
-    }
-  }
-  
-  // Method 2: Handle multi-line emails (join lines and remove spaces)
-  const fullText = lines.join('').replace(/\s+/g, '');
-  const multilineEmailMatch = fullText.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
-  if (multilineEmailMatch && isValidEmail(multilineEmailMatch[1])) {
-    return multilineEmailMatch[1].toLowerCase();
-  }
-  
-  // Method 3: Handle emails split across lines
-  for (let i = 0; i < lines.length - 1; i++) {
-    const currentLine = lines[i].trim();
-    const nextLine = lines[i + 1].trim();
-    
-    // Check if current line has @ and next line has domain
-    if (currentLine.includes('@') && /\.[a-zA-Z]{2,}/.test(nextLine)) {
-      const combinedEmail = (currentLine + nextLine).replace(/\s+/g, '');
-      const emailMatch = combinedEmail.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
-      if (emailMatch && isValidEmail(emailMatch[1])) {
-        return emailMatch[1].toLowerCase();
-      }
-    }
-  }
-  
-  // Method 4: Fix common OCR errors and spacing issues
-  const spacedText = text.replace(/\s+/g, ' ');
-  const fixedText = spacedText
-    .replace(/\s*@\s*/g, '@')     // Remove spaces around @
-    .replace(/\s*\.\s*/g, '.')    // Remove spaces around .
-    .replace(/at/gi, '@')         // Replace 'at' with @
-    .replace(/dot/gi, '.')        // Replace 'dot' with .
-    .replace(/\s+/g, '');         // Remove all spaces
-  
-  const fixedEmailMatch = fixedText.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
-  if (fixedEmailMatch && isValidEmail(fixedEmailMatch[1])) {
-    return fixedEmailMatch[1].toLowerCase();
-  }
-  
-  return '';
 }
 
 // Google Vision API for accurate text recognition
@@ -342,7 +96,57 @@ export async function processImageWithOCR(
   }
 }
 
-// Enhanced text parsing with intelligent recognition
+// Image preprocessing to improve OCR accuracy for form-like text
+async function preprocessImage(imageSrc: string): Promise<string> {
+  return new Promise((resolve) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d')!;
+    const img = new Image();
+    
+    img.onload = () => {
+      // Scale up image for better recognition
+      const scale = Math.max(1, 800 / Math.max(img.width, img.height));
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      
+      // Draw scaled image
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      
+      // Get image data
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+      
+      // Convert to grayscale with moderate contrast adjustment
+      for (let i = 0; i < data.length; i += 4) {
+        const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+        
+        // Moderate contrast enhancement (not as aggressive as before)
+        let enhanced;
+        if (avg < 50) {
+          enhanced = 0; // Very dark stays black
+        } else if (avg > 200) {
+          enhanced = 255; // Very light stays white
+        } else {
+          // Enhance contrast for middle values
+          enhanced = avg < 128 ? Math.max(0, avg - 30) : Math.min(255, avg + 30);
+        }
+        
+        data[i] = enhanced;     // Red
+        data[i + 1] = enhanced; // Green
+        data[i + 2] = enhanced; // Blue
+      }
+      
+      // Put processed image data back
+      ctx.putImageData(imageData, 0, 0);
+      
+      // Return processed image as base64
+      resolve(canvas.toDataURL());
+    };
+    
+    img.src = imageSrc;
+  });
+}
+
 function parseExtractedText(text: string): ExtractedData {
   const data: ExtractedData = {
     name: '',
@@ -361,17 +165,73 @@ function parseExtractedText(text: string): ExtractedData {
   // Split into lines for line-by-line analysis
   const lines = text.split(/[\n\r]+/).map(line => line.trim()).filter(line => line.length > 0);
   
-  // Enhanced text preprocessing for better recognition
-  const preprocessedText = preprocessTextForRecognition(text);
+  // Also prepare a single string version for pattern matching
+  const singleLineText = text.replace(/[\n\r]+/g, ' ').replace(/\s+/g, ' ');
   
-  // Use intelligent extraction methods
-  data.name = extractNameIntelligently(preprocessedText, lines);
-  data.phone = extractPhoneIntelligently(preprocessedText, lines);
-  data.email = extractEmailIntelligently(preprocessedText, lines);
-  
-  // Enhanced date extraction
+  // Enhanced parsing for form labels like "Name:", "Phone#:", "Email:", "Date:"
   for (const line of lines) {
     const cleanLine = line.trim();
+    
+    // Enhanced Name extraction - look for various name patterns and labels
+    if (/^(name|이름|성명|名前|nombre)\s*:?\s*/i.test(cleanLine)) {
+      const nameMatch = cleanLine.match(/^(name|이름|성명|名前|nombre)\s*:?\s*(.+)/i);
+      if (nameMatch && nameMatch[2]) {
+        let potentialName = nameMatch[2].trim();
+        
+        // Remove common OCR artifacts and labels
+        potentialName = potentialName.replace(/^(name|이름|성명|名前|nombre)\s*:?\s*/i, '').trim();
+        
+        // Enhanced validation for Korean, English, and mixed names
+        // Allow Korean characters, English letters, spaces, dots, hyphens
+        if (/^[a-zA-Z가-힣\s\.\-]{1,50}$/.test(potentialName) && 
+            potentialName.length >= 1 && 
+            potentialName.toLowerCase() !== 'name' &&
+            !potentialName.match(/^(phone|email|date|tel|mobile)$/i)) {
+          data.name = potentialName;
+        }
+      }
+    }
+    
+    // Enhanced Phone extraction - look for various phone patterns and labels
+    if (/^(phone|tel|mobile|cell|휴대폰|전화|핸드폰)\s*#?\s*:?\s*/i.test(cleanLine)) {
+      const phoneMatch = cleanLine.match(/^(phone|tel|mobile|cell|휴대폰|전화|핸드폰)\s*#?\s*:?\s*(.+)/i);
+      if (phoneMatch && phoneMatch[2]) {
+        const phoneText = phoneMatch[2].trim();
+        // Extract all digits including Korean and international formats
+        const digits = phoneText.replace(/[^\d]/g, '');
+        
+        // Handle various phone number formats
+        if (digits.length === 11 && digits.startsWith('010')) {
+          // Korean mobile format: 010-XXXX-XXXX
+          data.phone = `${digits.slice(0,3)}-${digits.slice(3,7)}-${digits.slice(7)}`;
+        } else if (digits.length === 10) {
+          // US format: (XXX) XXX-XXXX
+          data.phone = `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
+        } else if (digits.length >= 8 && digits.length <= 12) {
+          // Generic format with dashes every 3-4 digits
+          if (digits.length === 8) {
+            data.phone = `${digits.slice(0,4)}-${digits.slice(4)}`;
+          } else if (digits.length === 9) {
+            data.phone = `${digits.slice(0,3)}-${digits.slice(3,6)}-${digits.slice(6)}`;
+          } else {
+            data.phone = phoneText; // Keep original format if not standard
+          }
+        }
+      }
+    }
+    
+    // Enhanced Email extraction - look for email patterns anywhere in the line
+    if (/^(email|이메일|e-mail|mail)\s*:?\s*/i.test(cleanLine)) {
+      const emailMatch = cleanLine.match(/^(email|이메일|e-mail|mail)\s*:?\s*(.+)/i);
+      if (emailMatch && emailMatch[2]) {
+        const emailText = emailMatch[2].trim();
+        const emailPattern = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/;
+        const foundEmail = emailText.match(emailPattern);
+        if (foundEmail) {
+          data.email = foundEmail[1];
+        }
+      }
+    }
     
     // Date extraction - look for "Date:" followed by date
     if (/^date\s*:?\s*/i.test(cleanLine)) {
@@ -392,13 +252,234 @@ function parseExtractedText(text: string): ExtractedData {
     }
   }
   
-  // Log extraction results for debugging
-  console.log('Intelligent extraction results:', {
-    name: data.name,
-    phone: data.phone,
-    email: data.email,
-    workDate: data.workDate
-  });
+  // Enhanced fallback phone number extraction
+  if (!data.phone) {
+    // Multiple phone number patterns to try
+    const phonePatterns = [
+      /010[-\s]?\d{4}[-\s]?\d{4}/g,  // Korean mobile: 010-XXXX-XXXX
+      /\b\d{3}[-\s]?\d{4}[-\s]?\d{4}\b/g,  // Generic: XXX-XXXX-XXXX
+      /\b\d{3}[-\s]?\d{3}[-\s]?\d{4}\b/g,  // US: XXX-XXX-XXXX
+      /\(\d{3}\)\s?\d{3}[-\s]?\d{4}/g,     // US: (XXX) XXX-XXXX
+      /\b\d{10,11}\b/g                      // Plain digits 10-11 long
+    ];
+    
+    for (const pattern of phonePatterns) {
+      const matches = singleLineText.match(pattern);
+      if (matches) {
+        for (const match of matches) {
+          const digits = match.replace(/[^\d]/g, '');
+          
+          // Validate and format based on length
+          if (digits.length === 11 && digits.startsWith('010')) {
+            data.phone = `${digits.slice(0,3)}-${digits.slice(3,7)}-${digits.slice(7)}`;
+            break;
+          } else if (digits.length === 10) {
+            data.phone = `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
+            break;
+          } else if (digits.length === 8 || digits.length === 9) {
+            data.phone = match.trim(); // Keep original format
+            break;
+          }
+        }
+        if (data.phone) break;
+      }
+    }
+  }
+  
+  if (!data.email) {
+    // Enhanced email detection - try multiple approaches
+    
+    // Method 1: Look for emails in complete text (handles multi-line emails)
+    const fullText = lines.join(' ').replace(/\s+/g, ' ');
+    const emailPatterns = [
+      /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g,  // Standard email
+      /([a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g,   // With underscore and percent
+      /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9-]+\.[a-zA-Z]{2,4})/g, // Common domains
+      /([a-zA-Z0-9]+[@][a-zA-Z0-9.-]+[.][a-zA-Z]{2,})/g,    // Basic @ and . detection
+    ];
+    
+    for (const pattern of emailPatterns) {
+      const matches = fullText.match(pattern);
+      if (matches) {
+        for (const match of matches) {
+          const email = match.toLowerCase().trim();
+          if (isValidEmail(email)) {
+            data.email = email;
+            console.log('Found email (Method 1):', email);
+            break;
+          }
+        }
+        if (data.email) break;
+      }
+    }
+    
+    // Method 2: Handle split emails across multiple lines
+    if (!data.email) {
+      // Join consecutive lines that might contain parts of an email
+      for (let i = 0; i < lines.length - 1; i++) {
+        const currentLine = lines[i];
+        const nextLine = lines[i + 1];
+        
+        // Check if current line has @ and next line has a domain
+        if (currentLine.includes('@') && /\.[a-zA-Z]{2,}/.test(nextLine)) {
+          const combinedEmail = (currentLine + nextLine).replace(/\s+/g, '');
+          const emailMatch = combinedEmail.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+          if (emailMatch && isValidEmail(emailMatch[1])) {
+            data.email = emailMatch[1].toLowerCase();
+            console.log('Found split email (Method 2):', data.email);
+            break;
+          }
+        }
+        
+        // Check if current line has username and next line has @domain
+        if (/^[a-zA-Z0-9._%-]+$/.test(currentLine) && nextLine.match(/^@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)) {
+          const combinedEmail = currentLine + nextLine.replace(/\s+/g, '');
+          if (isValidEmail(combinedEmail)) {
+            data.email = combinedEmail.toLowerCase();
+            console.log('Found split email (Method 2b):', data.email);
+            break;
+          }
+        }
+      }
+    }
+    
+    // Method 3: Look for partial emails and reconstruct
+    if (!data.email) {
+      const emailParts = {
+        username: '',
+        domain: ''
+      };
+      
+      for (const line of lines) {
+        // Look for @ symbol with surrounding text
+        if (line.includes('@')) {
+          const atIndex = line.indexOf('@');
+          const beforeAt = line.substring(0, atIndex).replace(/[^a-zA-Z0-9._%-]/g, '');
+          const afterAt = line.substring(atIndex + 1).replace(/[^a-zA-Z0-9.-]/g, '');
+          
+          if (beforeAt.length > 0) emailParts.username = beforeAt;
+          if (afterAt.length > 0) emailParts.domain = afterAt;
+        }
+        
+        // Look for domain patterns
+        const domainMatch = line.match(/([a-zA-Z0-9-]+\.[a-zA-Z]{2,})/);
+        if (domainMatch && !emailParts.domain) {
+          emailParts.domain = domainMatch[1];
+        }
+        
+        // Look for username patterns (before finding @ or domain)
+        if (!emailParts.username) {
+          const usernameMatch = line.match(/^([a-zA-Z0-9._%-]+)$/);
+          if (usernameMatch && usernameMatch[1].length > 2) {
+            emailParts.username = usernameMatch[1];
+          }
+        }
+      }
+      
+      // Reconstruct email if we have both parts
+      if (emailParts.username && emailParts.domain) {
+        const reconstructedEmail = `${emailParts.username}@${emailParts.domain}`;
+        if (isValidEmail(reconstructedEmail)) {
+          data.email = reconstructedEmail.toLowerCase();
+          console.log('Found reconstructed email (Method 3):', data.email);
+        }
+      }
+    }
+    
+    // Method 4: Look for common email patterns with OCR errors
+    if (!data.email) {
+      const ocrErrorPatterns = [
+        /([a-zA-Z0-9._%+-]+[at][a-zA-Z0-9.-]+[dot][a-zA-Z]{2,})/gi,  // "at" instead of @
+        /([a-zA-Z0-9._%+-]+\s*[@]\s*[a-zA-Z0-9.-]+\s*[.]\s*[a-zA-Z]{2,})/g,  // Spaces around @ and .
+        /([a-zA-Z0-9._%+-]+[@][a-zA-Z0-9.-]+[dot][a-zA-Z]{2,})/gi,   // "dot" instead of .
+        /([a-zA-Z0-9._%+-]+\s*[a@]\s*[a-zA-Z0-9.-]+\s*[.o]\s*[a-zA-Z]{2,})/g,  // OCR confusion a/@, o/.
+      ];
+      
+      for (const pattern of ocrErrorPatterns) {
+        const match = fullText.match(pattern);
+        if (match) {
+          let email = match[0].toLowerCase()
+            .replace(/\s+/g, '')
+            .replace(/at/g, '@')
+            .replace(/dot/g, '.')
+            .replace(/[a]([a-zA-Z0-9.-]+[.o][a-zA-Z]{2,})/g, '@$1') // Fix a -> @
+            .replace(/[o]([a-zA-Z]{2,})/g, '.$1'); // Fix o -> .
+          
+          if (isValidEmail(email)) {
+            data.email = email;
+            console.log('Found email with OCR errors (Method 4):', email);
+            break;
+          }
+        }
+      }
+    }
+    
+    // Method 5: Advanced fuzzy matching for severely corrupted emails
+    if (!data.email) {
+      // Look for any text that has @ symbol and try to clean it up
+      const potentialEmails = fullText.match(/[a-zA-Z0-9._%-]*[@a][a-zA-Z0-9._%-]*[.o][a-zA-Z]{2,}/gi);
+      
+      if (potentialEmails) {
+        for (let email of potentialEmails) {
+          // Clean up common OCR errors
+          email = email.toLowerCase()
+            .replace(/[il1|]/g, 'i') // Common OCR confusions
+            .replace(/[o0]/g, 'o')   // O/0 confusion
+            .replace(/[5s]/g, 's')   // S/5 confusion
+            .replace(/[6g]/g, 'g')   // G/6 confusion
+            .replace(/[a@]/g, '@')   // A/@ confusion
+            .replace(/[.o]/g, '.');  // ./O confusion
+          
+          // Extract clean email pattern
+          const cleanMatch = email.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+          if (cleanMatch && isValidEmail(cleanMatch[1])) {
+            data.email = cleanMatch[1];
+            console.log('Found fuzzy email (Method 5):', data.email);
+            break;
+          }
+        }
+      }
+    }
+  }
+  
+  if (!data.name) {
+    // Enhanced fallback name detection for Korean and English names
+    for (const line of lines) {
+      // Skip lines with numbers, symbols, or form labels
+      if (!/[\d@#:()]/.test(line) && 
+          !line.toLowerCase().match(/^(phone|tel|email|date|mobile|cell|address|주소|전화|이메일)/)) {
+        
+        // Check for Korean names (1-5 characters)
+        const koreanMatch = line.match(/([가-힣]{1,5})/);
+        if (koreanMatch && koreanMatch[1].length >= 2) {
+          const koreanName = koreanMatch[1].trim();
+          if (koreanName.length >= 2 && koreanName.length <= 5 && 
+              !koreanName.match(/(이름|성명|전화|번호|주소|이메일)/)) {
+            data.name = koreanName;
+            break;
+          }
+        }
+        
+        // Check for English names (2-4 words)
+        const words = line.split(/\s+/).filter(word => 
+          /^[a-zA-Z]+$/.test(word) && 
+          word.length >= 2 && 
+          !word.toLowerCase().match(/^(name|phone|email|date|tel|mobile|cell)$/)
+        );
+        
+        if (words.length >= 1 && words.length <= 4) {
+          const potentialName = words.join(' ');
+          if (potentialName.length >= 2 && potentialName.length <= 50) {
+            data.name = potentialName;
+            break;
+          }
+        }
+      }
+    }
+  }
+  
+  // Debug: log the final parsed data
+  console.log('OCR Parsed Data:', data);
   
   return data;
 }
