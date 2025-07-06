@@ -1,5 +1,5 @@
 import { customers, users, type Customer, type InsertCustomer, type User, type InsertUser } from "@shared/schema";
-import { db } from "./db";
+import { createMySQLConnection } from "./db";
 import { eq, ilike, or, desc, gte, lte, and, count } from "drizzle-orm";
 
 export interface CustomerFilter {
@@ -57,33 +57,36 @@ function generateCustomerId(workDate: Date, programType?: string): string {
 }
 
 export class DatabaseStorage implements IStorage {
+  private db: any;
+
+  constructor(db: any) {
+    this.db = db;
+  }
   // User methods
   async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
+    const [user] = await this.db.select().from(users).where(eq(users.id, id));
     return user || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
+    const [user] = await this.db.select().from(users).where(eq(users.username, username));
     return user || undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(insertUser)
-      .returning();
+    const result = await this.db.insert(users).values(insertUser);
+    const [user] = await this.db.select().from(users).where(eq(users.id, result.insertId));
     return user;
   }
 
   // Customer methods
   async getCustomer(id: number): Promise<Customer | undefined> {
-    const [customer] = await db.select().from(customers).where(eq(customers.id, id));
+    const [customer] = await this.db.select().from(customers).where(eq(customers.id, id));
     return customer || undefined;
   }
 
   async getCustomers(): Promise<Customer[]> {
-    return await db.select().from(customers).orderBy(desc(customers.createdAt));
+    return await this.db.select().from(customers).orderBy(desc(customers.createdAt));
   }
 
   async getCustomersPaginated(page: number, limit: number, filter?: CustomerFilter): Promise<PaginatedResult<Customer>> {
@@ -135,13 +138,13 @@ export class DatabaseStorage implements IStorage {
     const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
 
     // Get total count
-    const [totalResult] = await db
+    const [totalResult] = await this.db
       .select({ count: count() })
       .from(customers)
       .where(whereClause);
 
     // Get paginated data
-    const data = await db
+    const data = await this.db
       .select()
       .from(customers)
       .where(whereClause)
@@ -162,7 +165,7 @@ export class DatabaseStorage implements IStorage {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    return await db
+    return await this.db
       .select()
       .from(customers)
       .where(gte(customers.createdAt, today))
@@ -170,7 +173,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async searchCustomers(query: string): Promise<Customer[]> {
-    return await db.select().from(customers).where(
+    return await this.db.select().from(customers).where(
       or(
         ilike(customers.name, `%${query}%`),
         ilike(customers.phone, `%${query}%`),
@@ -184,31 +187,24 @@ export class DatabaseStorage implements IStorage {
     // Generate unique customer ID
     const customerId = generateCustomerId(insertCustomer.workDate, insertCustomer.programType);
     
-    const [customer] = await db
-      .insert(customers)
-      .values({
-        ...insertCustomer,
-        customerId
-      })
-      .returning();
+    const result = await this.db.insert(customers).values({
+      ...insertCustomer,
+      customerId
+    });
+    
+    const [customer] = await this.db.select().from(customers).where(eq(customers.id, result.insertId));
     return customer;
   }
 
   async updateCustomer(id: number, updates: Partial<InsertCustomer>): Promise<Customer | undefined> {
-    const [customer] = await db
-      .update(customers)
-      .set(updates)
-      .where(eq(customers.id, id))
-      .returning();
+    await this.db.update(customers).set(updates).where(eq(customers.id, id));
+    const [customer] = await this.db.select().from(customers).where(eq(customers.id, id));
     return customer || undefined;
   }
 
   async updateCustomerStatus(id: number, status: string): Promise<Customer | undefined> {
-    const [customer] = await db
-      .update(customers)
-      .set({ status })
-      .where(eq(customers.id, id))
-      .returning();
+    await this.db.update(customers).set({ status }).where(eq(customers.id, id));
+    const [customer] = await this.db.select().from(customers).where(eq(customers.id, id));
     return customer || undefined;
   }
 }
@@ -373,13 +369,14 @@ class MemoryStorage implements IStorage {
 // Initialize storage with runtime fallback
 async function initializeStorage(): Promise<IStorage> {
   try {
-    const dbStorage = new DatabaseStorage();
+    const db = await createMySQLConnection();
+    const dbStorage = new DatabaseStorage(db);
     // Test database connection
     await dbStorage.getCustomers();
-    console.log('✓ Database connection successful');
+    console.log('✓ MySQL database connection successful');
     return dbStorage;
   } catch (error) {
-    console.log('⚠ Database not available, using memory storage');
+    console.log('⚠ MySQL database not available, using memory storage');
     console.log('Error:', error instanceof Error ? error.message : String(error));
     return new MemoryStorage();
   }

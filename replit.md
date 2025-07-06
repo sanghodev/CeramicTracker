@@ -131,6 +131,15 @@ Key customer fields include:
   - Advanced image matching with edge detection, texture analysis, and shape recognition
   - Optimized matching thresholds and accuracy display (75%+ Excellent, 60%+ Good, 45%+ Fair)
   - Integrated Google Vision API for text recognition
+- January 6, 2025. Enhanced email recognition system:
+  - 5-stage email detection system for multi-line, obscured, and OCR-corrupted emails
+  - Advanced fuzzy matching for severely corrupted text
+  - OCR error correction (at→@, dot→., character confusion handling)
+- January 6, 2025. Database migration to MySQL:
+  - Migrated from PostgreSQL to MySQL for GoDaddy hosting compatibility
+  - Updated schema using drizzle-orm/mysql-core
+  - Implemented fallback to memory storage when MySQL connection fails
+  - Modified insert/update operations for MySQL compatibility (no returning() clause)
 
 ## User Preferences
 

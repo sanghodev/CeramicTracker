@@ -1,15 +1,24 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from "ws";
+import { createConnection } from "mysql2/promise";
+import { drizzle } from "drizzle-orm/mysql2";
 import * as schema from "@shared/schema";
 
-neonConfig.webSocketConstructor = ws;
-
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
+// Create MySQL connection function
+export async function createMySQLConnection() {
+  try {
+    const connection = await createConnection({
+      host: process.env.MYSQL_HOST || 'sg2plzcpnl505849.prod.sin2.secureserver.net',
+      port: parseInt(process.env.MYSQL_PORT || '3306'),
+      user: process.env.MYSQL_USER || 'root',
+      password: process.env.MYSQL_PASSWORD || '',
+      database: process.env.MYSQL_DATABASE || 'pottery_studio',
+    });
+    
+    return drizzle(connection, { schema, mode: 'default' });
+  } catch (error) {
+    console.error('MySQL connection failed:', error);
+    throw error;
+  }
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-export const db = drizzle({ client: pool, schema });
+// Export a placeholder - actual connection will be created in storage.ts
+export let db: ReturnType<typeof drizzle>;

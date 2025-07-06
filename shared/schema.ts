@@ -1,8 +1,8 @@
-import { pgTable, text, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { mysqlTable, text, serial, timestamp, varchar } from "drizzle-orm/mysql-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const customers = pgTable("customers", {
+export const customers = mysqlTable("customers", {
   id: serial("id").primaryKey(),
   customerId: varchar("customer_id", { length: 20 }).notNull().unique(), // Format: YYMMDD-ProgramType-Number (e.g., 250611-P-001)
   name: varchar("name", { length: 100 }).notNull(),
@@ -37,7 +37,7 @@ export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
 export type Customer = typeof customers.$inferSelect;
 
 // Keep the existing users table
-export const users = pgTable("users", {
+export const users = mysqlTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
