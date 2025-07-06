@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Check, Save, X, CheckCircle, Calendar, Clock, Camera, Upload } from "lucide-react";
+import { Check, Save, X, CheckCircle, Calendar, Clock, Camera, Upload, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatPhoneNumber, isValidEmail, getSuggestedDates } from "@/lib/ocr";
+import { getImageUrl } from "@/lib/image-utils";
 import { z } from "zod";
 
 const formSchema = insertCustomerSchema.extend({
@@ -26,17 +27,18 @@ interface CustomerFormProps {
   initialData?: any;
   onSubmitted: () => void;
   onCancelled: () => void;
+  isEditing?: boolean;
 }
 
-export default function CustomerForm({ initialData, onSubmitted, onCancelled }: CustomerFormProps) {
+export default function CustomerForm({ initialData, onSubmitted, onCancelled, isEditing = false }: CustomerFormProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [phoneValue, setPhoneValue] = useState(initialData?.phone || "");
   const [emailValue, setEmailValue] = useState(initialData?.email || "");
-  const [workImagePreview, setWorkImagePreview] = useState<string | null>(initialData?.workImage || null);
-  const [customerImagePreview, setCustomerImagePreview] = useState<string | null>(initialData?.customerImage || null);
-  const [isGroupBooking, setIsGroupBooking] = useState(false);
-  const [groupSize, setGroupSize] = useState("2");
+  const [workImagePreview, setWorkImagePreview] = useState<string | null>(getImageUrl(initialData?.workImage) || null);
+  const [customerImagePreview, setCustomerImagePreview] = useState<string | null>(getImageUrl(initialData?.customerImage) || null);
+  const [isGroupBooking, setIsGroupBooking] = useState(initialData?.isGroup === "true" || initialData?.isGroup === true);
+  const [groupSize, setGroupSize] = useState(initialData?.groupSize || "2");
   const [showWorkCamera, setShowWorkCamera] = useState(false);
   const workVideoRef = useRef<HTMLVideoElement>(null);
   const workCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -60,21 +62,47 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
 
   const createCustomerMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      const response = await apiRequest("POST", "/api/customers", data);
+      const method = isEditing ? "PATCH" : "POST";
+      const url = isEditing ? `/api/customers/${initialData?.id}` : "/api/customers";
+      const response = await apiRequest(method, url, data);
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/customers/paginated"] });
       toast({
-        title: "Save Complete",
-        description: "Customer information successfully saved.",
+        title: isEditing ? "Update Complete" : "Save Complete",
+        description: isEditing ? "Customer information successfully updated." : "Customer information successfully saved.",
       });
       onSubmitted();
     },
     onError: () => {
       toast({
-        title: "Save Failed",
-        description: "An error occurred while saving customer information.",
+        title: isEditing ? "Update Failed" : "Save Failed",
+        description: isEditing ? "An error occurred while updating customer information." : "An error occurred while saving customer information.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteCustomerMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("DELETE", `/api/customers/${initialData?.id}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/customers/paginated"] });
+      toast({
+        title: "Delete Complete",
+        description: "Customer information successfully deleted.",
+      });
+      onSubmitted();
+    },
+    onError: () => {
+      toast({
+        title: "Delete Failed",
+        description: "An error occurred while deleting customer information.",
         variant: "destructive",
       });
     },
@@ -667,8 +695,22 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled }: 
                 className="flex-1 bg-primary hover:bg-blue-700 text-white font-semibold py-3"
               >
                 <Save className="mr-2" size={16} />
-                {createCustomerMutation.isPending ? "Saving..." : "Save"}
+                {createCustomerMutation.isPending 
+                  ? (isEditing ? "Updating..." : "Saving...") 
+                  : (isEditing ? "Update" : "Save")}
               </Button>
+              {isEditing && (
+                <Button
+                  type="button"
+                  onClick={() => deleteCustomerMutation.mutate()}
+                  disabled={deleteCustomerMutation.isPending}
+                  variant="destructive"
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3"
+                >
+                  <Trash2 className="mr-2" size={16} />
+                  {deleteCustomerMutation.isPending ? "Deleting..." : "Delete"}
+                </Button>
+              )}
               <Button
                 type="button"
                 onClick={onCancelled}

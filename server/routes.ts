@@ -329,6 +329,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete customer
+  app.delete("/api/customers/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid customer ID" });
+      }
+
+      // Get customer info before deletion to clean up files
+      const customer = await storage.getCustomer(id);
+      if (!customer) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+
+      // Delete customer from storage
+      const success = await storage.deleteCustomer(id);
+      if (!success) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+
+      // Clean up image files
+      try {
+        if (customer.workImage) {
+          const workImagePath = path.join(uploadsDir, customer.workImage);
+          if (fs.existsSync(workImagePath)) {
+            fs.unlinkSync(workImagePath);
+          }
+        }
+        if (customer.customerImage) {
+          const customerImagePath = path.join(uploadsDir, customer.customerImage);
+          if (fs.existsSync(customerImagePath)) {
+            fs.unlinkSync(customerImagePath);
+          }
+        }
+      } catch (fileError) {
+        console.error("Error deleting files:", fileError);
+        // Continue even if file deletion fails
+      }
+
+      res.json({ message: "Customer deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting customer:", error);
+      res.status(500).json({ message: "Failed to delete customer" });
+    }
+  });
+
   // Check image files status
   app.get("/api/check-images", async (req, res) => {
     try {

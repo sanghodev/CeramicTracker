@@ -159,6 +159,7 @@ export default function PaginatedCustomerList() {
               initialData={editingCustomer}
               onSubmitted={handleEditSubmit}
               onCancelled={handleEditCancel}
+              isEditing={true}
             />
           </CardContent>
         </Card>

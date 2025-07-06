@@ -32,6 +32,7 @@ export interface IStorage {
   createCustomer(customer: InsertCustomer): Promise<Customer>;
   updateCustomer(id: number, updates: Partial<InsertCustomer>): Promise<Customer | undefined>;
   updateCustomerStatus(id: number, status: string): Promise<Customer | undefined>;
+  deleteCustomer(id: number): Promise<boolean>;
 }
 
 // Helper function to generate unique customer ID
@@ -207,6 +208,11 @@ export class DatabaseStorage implements IStorage {
     const [customer] = await this.db.select().from(customers).where(eq(customers.id, id));
     return customer || undefined;
   }
+
+  async deleteCustomer(id: number): Promise<boolean> {
+    const result = await this.db.delete(customers).where(eq(customers.id, id));
+    return result.affectedRows > 0;
+  }
 }
 
 // In-Memory Storage as fallback
@@ -364,6 +370,14 @@ class MemoryStorage implements IStorage {
     this.customers[index].status = status;
     return this.customers[index];
   }
+
+  async deleteCustomer(id: number): Promise<boolean> {
+    const index = this.customers.findIndex(c => c.id === id);
+    if (index === -1) return false;
+
+    this.customers.splice(index, 1);
+    return true;
+  }
 }
 
 // Initialize storage with runtime fallback
@@ -410,5 +424,8 @@ export const storage = {
   },
   async updateCustomerStatus(id: number, status: string) { 
     return (await getStorage()).updateCustomerStatus(id, status); 
+  },
+  async deleteCustomer(id: number) { 
+    return (await getStorage()).deleteCustomer(id); 
   }
 };
