@@ -328,9 +328,10 @@ class MemoryStorage implements IStorage {
   }
 
   async createCustomer(insertCustomer: InsertCustomer): Promise<Customer> {
+    const customerId = generateCustomerId(new Date(insertCustomer.workDate), insertCustomer.programType);
     const customer: Customer = {
       id: this.idCounter++,
-      customerId: insertCustomer.customerId || generateCustomerId(new Date(insertCustomer.workDate), insertCustomer.programType),
+      customerId: customerId,
       name: insertCustomer.name,
       phone: insertCustomer.phone,
       email: insertCustomer.email || null,
@@ -379,7 +380,7 @@ async function initializeStorage(): Promise<IStorage> {
     return dbStorage;
   } catch (error) {
     console.log('⚠ Database not available, using memory storage');
-    console.log('Error:', error.message);
+    console.log('Error:', error instanceof Error ? error.message : String(error));
     return new MemoryStorage();
   }
 }

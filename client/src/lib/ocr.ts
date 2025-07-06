@@ -287,21 +287,156 @@ function parseExtractedText(text: string): ExtractedData {
   }
   
   if (!data.email) {
-    // Enhanced email pattern to catch common email formats
+    // Enhanced email detection - try multiple approaches
+    
+    // Method 1: Look for emails in complete text (handles multi-line emails)
+    const fullText = lines.join(' ').replace(/\s+/g, ' ');
     const emailPatterns = [
       /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g,  // Standard email
       /([a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g,   // With underscore and percent
-      /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9-]+\.[a-zA-Z]{2,4})/g  // Common domains
+      /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9-]+\.[a-zA-Z]{2,4})/g, // Common domains
+      /([a-zA-Z0-9]+[@][a-zA-Z0-9.-]+[.][a-zA-Z]{2,})/g,    // Basic @ and . detection
     ];
     
     for (const pattern of emailPatterns) {
-      const emailMatch = singleLineText.match(pattern);
-      if (emailMatch && emailMatch[0]) {
-        // Validate the email format
-        const email = emailMatch[0].toLowerCase();
-        if (isValidEmail(email)) {
-          data.email = email;
-          break;
+      const matches = fullText.match(pattern);
+      if (matches) {
+        for (const match of matches) {
+          const email = match.toLowerCase().trim();
+          if (isValidEmail(email)) {
+            data.email = email;
+            console.log('Found email (Method 1):', email);
+            break;
+          }
+        }
+        if (data.email) break;
+      }
+    }
+    
+    // Method 2: Handle split emails across multiple lines
+    if (!data.email) {
+      // Join consecutive lines that might contain parts of an email
+      for (let i = 0; i < lines.length - 1; i++) {
+        const currentLine = lines[i];
+        const nextLine = lines[i + 1];
+        
+        // Check if current line has @ and next line has a domain
+        if (currentLine.includes('@') && /\.[a-zA-Z]{2,}/.test(nextLine)) {
+          const combinedEmail = (currentLine + nextLine).replace(/\s+/g, '');
+          const emailMatch = combinedEmail.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+          if (emailMatch && isValidEmail(emailMatch[1])) {
+            data.email = emailMatch[1].toLowerCase();
+            console.log('Found split email (Method 2):', data.email);
+            break;
+          }
+        }
+        
+        // Check if current line has username and next line has @domain
+        if (/^[a-zA-Z0-9._%-]+$/.test(currentLine) && nextLine.match(/^@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)) {
+          const combinedEmail = currentLine + nextLine.replace(/\s+/g, '');
+          if (isValidEmail(combinedEmail)) {
+            data.email = combinedEmail.toLowerCase();
+            console.log('Found split email (Method 2b):', data.email);
+            break;
+          }
+        }
+      }
+    }
+    
+    // Method 3: Look for partial emails and reconstruct
+    if (!data.email) {
+      const emailParts = {
+        username: '',
+        domain: ''
+      };
+      
+      for (const line of lines) {
+        // Look for @ symbol with surrounding text
+        if (line.includes('@')) {
+          const atIndex = line.indexOf('@');
+          const beforeAt = line.substring(0, atIndex).replace(/[^a-zA-Z0-9._%-]/g, '');
+          const afterAt = line.substring(atIndex + 1).replace(/[^a-zA-Z0-9.-]/g, '');
+          
+          if (beforeAt.length > 0) emailParts.username = beforeAt;
+          if (afterAt.length > 0) emailParts.domain = afterAt;
+        }
+        
+        // Look for domain patterns
+        const domainMatch = line.match(/([a-zA-Z0-9-]+\.[a-zA-Z]{2,})/);
+        if (domainMatch && !emailParts.domain) {
+          emailParts.domain = domainMatch[1];
+        }
+        
+        // Look for username patterns (before finding @ or domain)
+        if (!emailParts.username) {
+          const usernameMatch = line.match(/^([a-zA-Z0-9._%-]+)$/);
+          if (usernameMatch && usernameMatch[1].length > 2) {
+            emailParts.username = usernameMatch[1];
+          }
+        }
+      }
+      
+      // Reconstruct email if we have both parts
+      if (emailParts.username && emailParts.domain) {
+        const reconstructedEmail = `${emailParts.username}@${emailParts.domain}`;
+        if (isValidEmail(reconstructedEmail)) {
+          data.email = reconstructedEmail.toLowerCase();
+          console.log('Found reconstructed email (Method 3):', data.email);
+        }
+      }
+    }
+    
+    // Method 4: Look for common email patterns with OCR errors
+    if (!data.email) {
+      const ocrErrorPatterns = [
+        /([a-zA-Z0-9._%+-]+[at][a-zA-Z0-9.-]+[dot][a-zA-Z]{2,})/gi,  // "at" instead of @
+        /([a-zA-Z0-9._%+-]+\s*[@]\s*[a-zA-Z0-9.-]+\s*[.]\s*[a-zA-Z]{2,})/g,  // Spaces around @ and .
+        /([a-zA-Z0-9._%+-]+[@][a-zA-Z0-9.-]+[dot][a-zA-Z]{2,})/gi,   // "dot" instead of .
+        /([a-zA-Z0-9._%+-]+\s*[a@]\s*[a-zA-Z0-9.-]+\s*[.o]\s*[a-zA-Z]{2,})/g,  // OCR confusion a/@, o/.
+      ];
+      
+      for (const pattern of ocrErrorPatterns) {
+        const match = fullText.match(pattern);
+        if (match) {
+          let email = match[0].toLowerCase()
+            .replace(/\s+/g, '')
+            .replace(/at/g, '@')
+            .replace(/dot/g, '.')
+            .replace(/[a]([a-zA-Z0-9.-]+[.o][a-zA-Z]{2,})/g, '@$1') // Fix a -> @
+            .replace(/[o]([a-zA-Z]{2,})/g, '.$1'); // Fix o -> .
+          
+          if (isValidEmail(email)) {
+            data.email = email;
+            console.log('Found email with OCR errors (Method 4):', email);
+            break;
+          }
+        }
+      }
+    }
+    
+    // Method 5: Advanced fuzzy matching for severely corrupted emails
+    if (!data.email) {
+      // Look for any text that has @ symbol and try to clean it up
+      const potentialEmails = fullText.match(/[a-zA-Z0-9._%-]*[@a][a-zA-Z0-9._%-]*[.o][a-zA-Z]{2,}/gi);
+      
+      if (potentialEmails) {
+        for (let email of potentialEmails) {
+          // Clean up common OCR errors
+          email = email.toLowerCase()
+            .replace(/[il1|]/g, 'i') // Common OCR confusions
+            .replace(/[o0]/g, 'o')   // O/0 confusion
+            .replace(/[5s]/g, 's')   // S/5 confusion
+            .replace(/[6g]/g, 'g')   // G/6 confusion
+            .replace(/[a@]/g, '@')   // A/@ confusion
+            .replace(/[.o]/g, '.');  // ./O confusion
+          
+          // Extract clean email pattern
+          const cleanMatch = email.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+          if (cleanMatch && isValidEmail(cleanMatch[1])) {
+            data.email = cleanMatch[1];
+            console.log('Found fuzzy email (Method 5):', data.email);
+            break;
+          }
         }
       }
     }
