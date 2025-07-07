@@ -209,7 +209,7 @@ export default function ImageSearch() {
           if (imageUrl) {
             const similarity = await compareImages(capturedImage, imageUrl);
 
-            if (similarity > 0.30) { // Optimized threshold for enhanced pattern matching
+            if (similarity > 0.45) { // Raised threshold for pottery-specific matching
               matches.push({
                 customer,
                 similarity,
@@ -225,7 +225,7 @@ export default function ImageSearch() {
           if (imageUrl) {
             const similarity = await compareImages(capturedImage, imageUrl);
 
-            if (similarity > 0.30) { // Optimized threshold for enhanced pattern matching
+            if (similarity > 0.45) { // Raised threshold for pottery-specific matching
               matches.push({
                 customer,
                 similarity,
@@ -265,7 +265,7 @@ export default function ImageSearch() {
     }
   };
 
-  // Enhanced image comparison using multiple techniques
+  // Enhanced image comparison using multiple techniques optimized for pottery
   const compareImages = async (img1: string, img2: string): Promise<number> => {
     return new Promise((resolve) => {
       const canvas1 = document.createElement('canvas');
@@ -277,29 +277,12 @@ export default function ImageSearch() {
       const image2 = new Image();
       
       let loadedCount = 0;
-      
-      // Simple pixel-based comparison
-      const comparePixels = (data1: Uint8ClampedArray, data2: Uint8ClampedArray): number => {
-        let totalDifference = 0;
-        const totalPixels = data1.length / 4;
-        
-        for (let i = 0; i < data1.length; i += 4) {
-          const rDiff = Math.abs(data1[i] - data2[i]);
-          const gDiff = Math.abs(data1[i + 1] - data2[i + 1]);
-          const bDiff = Math.abs(data1[i + 2] - data2[i + 2]);
-          const pixelDiff = (rDiff + gDiff + bDiff) / 3;
-          totalDifference += pixelDiff;
-        }
-        
-        const averageDifference = totalDifference / totalPixels;
-        return Math.max(0, 1 - (averageDifference / 255));
-      };
 
       const processImages = () => {
         if (loadedCount < 2) return;
         
-        // Use larger size for better comparison
-        const size = 64;
+        // Use larger size for better comparison - increased for pottery details
+        const size = 128;
         canvas1.width = canvas2.width = size;
         canvas1.height = canvas2.height = size;
         
@@ -314,59 +297,419 @@ export default function ImageSearch() {
           return;
         }
         
-        // Multiple comparison techniques
-        const histogramSimilarity = compareHistograms(data1, data2);
-        const structuralSimilarity = compareStructural(data1, data2, size);
-        const colorSimilarity = compareColorDistribution(data1, data2);
-        const pixelSimilarity = comparePixels(data1, data2);
+        // Pottery-specific analysis
+        const shapeContourSimilarity = compareShapeContours(data1, data2, size);
+        const patternSimilarity = comparePatterns(data1, data2, size);
+        const colorAdaptiveSimilarity = compareColorAdaptive(data1, data2);
+        const glazeTextureSimilarity = compareGlazeTexture(data1, data2, size);
+        const proportionSimilarity = compareProportions(data1, data2, size);
+        const surfaceDetailSimilarity = compareSurfaceDetails(data1, data2, size);
+        const symmetrySimilarity = compareSymmetry(data1, data2, size);
         
-
-        
-        // Enhanced pattern matching
-        const edgeSimilarity = compareEdgePatterns(data1, data2, size);
-        const textureSimilarity = compareTexture(data1, data2, size);
-        const shapeSimilarity = compareShapes(data1, data2, size);
-        
-        // Advanced weighted combination emphasizing pattern and shape recognition
+        // Weighted combination optimized for pottery recognition
         const combinedSimilarity = (
-          histogramSimilarity * 0.15 +          // Color distribution 
-          Math.max(0, structuralSimilarity) * 0.10 + // Overall structure
-          colorSimilarity * 0.20 +               // Average colors
-          pixelSimilarity * 0.15 +               // Direct pixel comparison
-          edgeSimilarity * 0.25 +                // Edge patterns (critical for ceramics)
-          textureSimilarity * 0.10 +             // Surface texture
-          shapeSimilarity * 0.05                 // Basic shape detection
+          shapeContourSimilarity * 0.35 +     // Shape outline (most important)
+          patternSimilarity * 0.25 +          // Surface patterns/decorations
+          colorAdaptiveSimilarity * 0.15 +    // Color accounting for firing changes
+          glazeTextureSimilarity * 0.10 +     // Glaze texture
+          proportionSimilarity * 0.08 +       // Height/width proportions
+          surfaceDetailSimilarity * 0.05 +    // Fine surface details
+          symmetrySimilarity * 0.02           // Symmetry characteristics
         );
         
         resolve(Math.max(0, Math.min(1, combinedSimilarity)));
       };
       
-      // Color histogram comparison
-      const compareHistograms = (data1: Uint8ClampedArray, data2: Uint8ClampedArray): number => {
-        const hist1 = new Array(256).fill(0);
-        const hist2 = new Array(256).fill(0);
+      // Shape contour comparison - most important for pottery
+      const compareShapeContours = (data1: Uint8ClampedArray, data2: Uint8ClampedArray, size: number): number => {
+        const contour1 = extractContour(data1, size);
+        const contour2 = extractContour(data2, size);
         
-        for (let i = 0; i < data1.length; i += 4) {
-          const gray1 = Math.round(0.299 * data1[i] + 0.587 * data1[i + 1] + 0.114 * data1[i + 2]);
-          const gray2 = Math.round(0.299 * data2[i] + 0.587 * data2[i + 1] + 0.114 * data2[i + 2]);
-          hist1[gray1]++;
-          hist2[gray2]++;
+        if (contour1.length === 0 || contour2.length === 0) return 0;
+        
+        // Normalize contours to same scale
+        const normalizedContour1 = normalizeContour(contour1);
+        const normalizedContour2 = normalizeContour(contour2);
+        
+        // Compare contour shapes using Fourier descriptors
+        const fourier1 = computeFourierDescriptors(normalizedContour1);
+        const fourier2 = computeFourierDescriptors(normalizedContour2);
+        
+        return compareFourierDescriptors(fourier1, fourier2);
+      };
+      
+      // Extract object contour/outline
+      const extractContour = (data: Uint8ClampedArray, size: number): Array<{x: number, y: number}> => {
+        const contour: Array<{x: number, y: number}> = [];
+        
+        // Convert to binary mask first
+        const threshold = 128;
+        const binary = new Array(size * size).fill(0);
+        
+        for (let i = 0; i < data.length; i += 4) {
+          const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+          binary[i / 4] = gray > threshold ? 1 : 0;
         }
         
-        // Normalize histograms
-        const totalPixels = data1.length / 4;
-        for (let i = 0; i < 256; i++) {
-          hist1[i] /= totalPixels;
-          hist2[i] /= totalPixels;
+        // Find contour using edge detection
+        for (let y = 1; y < size - 1; y++) {
+          for (let x = 1; x < size - 1; x++) {
+            const idx = y * size + x;
+            
+            if (binary[idx] === 1) {
+              // Check if this is an edge pixel
+              const neighbors = [
+                binary[idx - 1], binary[idx + 1],
+                binary[idx - size], binary[idx + size]
+              ];
+              
+              if (neighbors.some(n => n === 0)) {
+                contour.push({x, y});
+              }
+            }
+          }
         }
         
-        // Calculate intersection
+        return contour;
+      };
+      
+      // Normalize contour to standard scale
+      const normalizeContour = (contour: Array<{x: number, y: number}>): Array<{x: number, y: number}> => {
+        if (contour.length === 0) return [];
+        
+        const minX = Math.min(...contour.map(p => p.x));
+        const maxX = Math.max(...contour.map(p => p.x));
+        const minY = Math.min(...contour.map(p => p.y));
+        const maxY = Math.max(...contour.map(p => p.y));
+        
+        const scaleX = maxX - minX;
+        const scaleY = maxY - minY;
+        
+        if (scaleX === 0 || scaleY === 0) return contour;
+        
+        return contour.map(p => ({
+          x: (p.x - minX) / scaleX,
+          y: (p.y - minY) / scaleY
+        }));
+      };
+      
+      // Simple Fourier descriptors for shape comparison
+      const computeFourierDescriptors = (contour: Array<{x: number, y: number}>): number[] => {
+        const descriptors: number[] = [];
+        const n = Math.min(contour.length, 32); // Use first 32 points
+        
+        for (let k = 0; k < 8; k++) { // 8 descriptors
+          let real = 0, imag = 0;
+          
+          for (let j = 0; j < n; j++) {
+            const angle = -2 * Math.PI * k * j / n;
+            const complex = contour[j].x + contour[j].y;
+            real += complex * Math.cos(angle);
+            imag += complex * Math.sin(angle);
+          }
+          
+          descriptors.push(Math.sqrt(real * real + imag * imag) / n);
+        }
+        
+        return descriptors;
+      };
+      
+      // Compare Fourier descriptors
+      const compareFourierDescriptors = (desc1: number[], desc2: number[]): number => {
+        let similarity = 0;
+        const len = Math.min(desc1.length, desc2.length);
+        
+        for (let i = 0; i < len; i++) {
+          const diff = Math.abs(desc1[i] - desc2[i]);
+          similarity += Math.exp(-diff * 2); // Exponential decay for differences
+        }
+        
+        return similarity / len;
+      };
+
+      // Pattern recognition for pottery decorations
+      const comparePatterns = (data1: Uint8ClampedArray, data2: Uint8ClampedArray, size: number): number => {
+        const patterns1 = extractPatterns(data1, size);
+        const patterns2 = extractPatterns(data2, size);
+        
+        return comparePatternSets(patterns1, patterns2);
+      };
+      
+      // Extract repeating patterns
+      const extractPatterns = (data: Uint8ClampedArray, size: number): number[] => {
+        const patterns: number[] = [];
+        const blockSize = 8;
+        
+        for (let y = 0; y < size - blockSize; y += blockSize) {
+          for (let x = 0; x < size - blockSize; x += blockSize) {
+            let variance = 0;
+            let mean = 0;
+            
+            // Calculate block statistics
+            for (let dy = 0; dy < blockSize; dy++) {
+              for (let dx = 0; dx < blockSize; dx++) {
+                const idx = ((y + dy) * size + (x + dx)) * 4;
+                const gray = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+                mean += gray;
+              }
+            }
+            mean /= (blockSize * blockSize);
+            
+            for (let dy = 0; dy < blockSize; dy++) {
+              for (let dx = 0; dx < blockSize; dx++) {
+                const idx = ((y + dy) * size + (x + dx)) * 4;
+                const gray = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+                variance += Math.pow(gray - mean, 2);
+              }
+            }
+            variance /= (blockSize * blockSize);
+            
+            patterns.push(variance);
+          }
+        }
+        
+        return patterns;
+      };
+      
+      // Compare pattern sets
+      const comparePatternSets = (patterns1: number[], patterns2: number[]): number => {
+        const len = Math.min(patterns1.length, patterns2.length);
+        if (len === 0) return 0;
+        
+        let similarity = 0;
+        for (let i = 0; i < len; i++) {
+          const diff = Math.abs(patterns1[i] - patterns2[i]);
+          similarity += Math.exp(-diff / 1000); // Normalize by typical variance
+        }
+        
+        return similarity / len;
+      };
+
+      // Color adaptive comparison accounting for firing changes
+      const compareColorAdaptive = (data1: Uint8ClampedArray, data2: Uint8ClampedArray): number => {
+        const hist1 = buildColorHistogram(data1);
+        const hist2 = buildColorHistogram(data2);
+        
+        // Compare base colors and account for darkening/lightening
+        let bestMatch = 0;
+        
+        // Try different brightness adjustments (-50 to +50)
+        for (let adjust = -50; adjust <= 50; adjust += 10) {
+          const adjustedHist = adjustHistogram(hist1, adjust);
+          const match = compareHistograms(adjustedHist, hist2);
+          bestMatch = Math.max(bestMatch, match);
+        }
+        
+        return bestMatch;
+      };
+      
+      // Build detailed color histogram
+      const buildColorHistogram = (data: Uint8ClampedArray): number[] => {
+        const hist = new Array(256).fill(0);
+        
+        for (let i = 0; i < data.length; i += 4) {
+          const gray = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+          hist[gray]++;
+        }
+        
+        // Normalize
+        const total = data.length / 4;
+        return hist.map(h => h / total);
+      };
+      
+      // Adjust histogram for brightness changes
+      const adjustHistogram = (hist: number[], adjust: number): number[] => {
+        const adjusted = new Array(256).fill(0);
+        
+        for (let i = 0; i < hist.length; i++) {
+          const newIndex = Math.max(0, Math.min(255, i + adjust));
+          adjusted[newIndex] += hist[i];
+        }
+        
+        return adjusted;
+      };
+      
+      // Compare histograms
+      const compareHistograms = (hist1: number[], hist2: number[]): number => {
         let intersection = 0;
-        for (let i = 0; i < 256; i++) {
+        for (let i = 0; i < Math.min(hist1.length, hist2.length); i++) {
           intersection += Math.min(hist1[i], hist2[i]);
         }
-        
         return intersection;
+      };
+
+      // Glaze texture comparison
+      const compareGlazeTexture = (data1: Uint8ClampedArray, data2: Uint8ClampedArray, size: number): number => {
+        const texture1 = computeGlazeTexture(data1, size);
+        const texture2 = computeGlazeTexture(data2, size);
+        
+        // Compare texture features
+        const smoothnessDiff = Math.abs(texture1.smoothness - texture2.smoothness);
+        const glossinessDiff = Math.abs(texture1.glossiness - texture2.glossiness);
+        const grainDiff = Math.abs(texture1.grain - texture2.grain);
+        
+        const similarity = 1 - (smoothnessDiff + glossinessDiff + grainDiff) / 3;
+        return Math.max(0, similarity);
+      };
+      
+      // Compute glaze texture features
+      const computeGlazeTexture = (data: Uint8ClampedArray, size: number) => {
+        let smoothness = 0;
+        let glossiness = 0;
+        let grain = 0;
+        let count = 0;
+        
+        for (let y = 1; y < size - 1; y++) {
+          for (let x = 1; x < size - 1; x++) {
+            const idx = (y * size + x) * 4;
+            const center = data[idx] + data[idx + 1] + data[idx + 2];
+            
+            // Calculate local variance (smoothness)
+            const neighbors = [
+              data[idx - 4] + data[idx - 3] + data[idx - 2],
+              data[idx + 4] + data[idx + 5] + data[idx + 6],
+              data[idx - size * 4] + data[idx - size * 4 + 1] + data[idx - size * 4 + 2],
+              data[idx + size * 4] + data[idx + size * 4 + 1] + data[idx + size * 4 + 2]
+            ];
+            
+            const variance = neighbors.reduce((sum, n) => sum + Math.pow(n - center, 2), 0) / 4;
+            smoothness += 1 / (1 + variance / 1000);
+            
+            // Glossiness based on brightness variation
+            const brightness = center / 3;
+            glossiness += brightness > 180 ? 1 : brightness / 180;
+            
+            // Grain based on high-frequency detail
+            const highFreq = Math.abs(center - neighbors[0]) + Math.abs(center - neighbors[1]);
+            grain += highFreq / 255;
+            
+            count++;
+          }
+        }
+        
+        return {
+          smoothness: smoothness / count,
+          glossiness: glossiness / count,
+          grain: grain / count
+        };
+      };
+
+      // Proportions comparison
+      const compareProportions = (data1: Uint8ClampedArray, data2: Uint8ClampedArray, size: number): number => {
+        const props1 = calculateProportions(data1, size);
+        const props2 = calculateProportions(data2, size);
+        
+        const aspectDiff = Math.abs(props1.aspectRatio - props2.aspectRatio);
+        const heightDiff = Math.abs(props1.relativeHeight - props2.relativeHeight);
+        const widthDiff = Math.abs(props1.relativeWidth - props2.relativeWidth);
+        
+        return Math.max(0, 1 - (aspectDiff + heightDiff + widthDiff) / 3);
+      };
+      
+      // Calculate object proportions
+      const calculateProportions = (data: Uint8ClampedArray, size: number) => {
+        let minX = size, maxX = 0, minY = size, maxY = 0;
+        
+        for (let y = 0; y < size; y++) {
+          for (let x = 0; x < size; x++) {
+            const idx = (y * size + x) * 4;
+            const gray = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+            
+            if (gray > 128) { // Object pixel
+              minX = Math.min(minX, x);
+              maxX = Math.max(maxX, x);
+              minY = Math.min(minY, y);
+              maxY = Math.max(maxY, y);
+            }
+          }
+        }
+        
+        const width = maxX - minX;
+        const height = maxY - minY;
+        
+        return {
+          aspectRatio: width > 0 ? height / width : 1,
+          relativeHeight: height / size,
+          relativeWidth: width / size
+        };
+      };
+
+      // Surface detail comparison
+      const compareSurfaceDetails = (data1: Uint8ClampedArray, data2: Uint8ClampedArray, size: number): number => {
+        const details1 = extractSurfaceDetails(data1, size);
+        const details2 = extractSurfaceDetails(data2, size);
+        
+        return compareDetailSets(details1, details2);
+      };
+      
+      // Extract fine surface details
+      const extractSurfaceDetails = (data: Uint8ClampedArray, size: number): number[] => {
+        const details: number[] = [];
+        
+        for (let y = 2; y < size - 2; y++) {
+          for (let x = 2; x < size - 2; x++) {
+            const idx = (y * size + x) * 4;
+            const center = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+            
+            // Local detail measure using Laplacian
+            const laplacian = 
+              -4 * center +
+              (0.299 * data[idx - 4] + 0.587 * data[idx - 3] + 0.114 * data[idx - 2]) +
+              (0.299 * data[idx + 4] + 0.587 * data[idx + 5] + 0.114 * data[idx + 6]) +
+              (0.299 * data[idx - size * 4] + 0.587 * data[idx - size * 4 + 1] + 0.114 * data[idx - size * 4 + 2]) +
+              (0.299 * data[idx + size * 4] + 0.587 * data[idx + size * 4 + 1] + 0.114 * data[idx + size * 4 + 2]);
+            
+            details.push(Math.abs(laplacian));
+          }
+        }
+        
+        return details;
+      };
+      
+      // Compare detail sets
+      const compareDetailSets = (details1: number[], details2: number[]): number => {
+        const len = Math.min(details1.length, details2.length);
+        if (len === 0) return 0;
+        
+        let similarity = 0;
+        for (let i = 0; i < len; i++) {
+          const diff = Math.abs(details1[i] - details2[i]);
+          similarity += Math.exp(-diff / 50);
+        }
+        
+        return similarity / len;
+      };
+
+      // Symmetry comparison
+      const compareSymmetry = (data1: Uint8ClampedArray, data2: Uint8ClampedArray, size: number): number => {
+        const sym1 = measureSymmetry(data1, size);
+        const sym2 = measureSymmetry(data2, size);
+        
+        return 1 - Math.abs(sym1 - sym2);
+      };
+      
+      // Measure vertical symmetry
+      const measureSymmetry = (data: Uint8ClampedArray, size: number): number => {
+        let symmetryScore = 0;
+        let count = 0;
+        
+        const mid = Math.floor(size / 2);
+        
+        for (let y = 0; y < size; y++) {
+          for (let x = 0; x < mid; x++) {
+            const leftIdx = (y * size + x) * 4;
+            const rightIdx = (y * size + (size - 1 - x)) * 4;
+            
+            const leftGray = 0.299 * data[leftIdx] + 0.587 * data[leftIdx + 1] + 0.114 * data[leftIdx + 2];
+            const rightGray = 0.299 * data[rightIdx] + 0.587 * data[rightIdx + 1] + 0.114 * data[rightIdx + 2];
+            
+            const diff = Math.abs(leftGray - rightGray);
+            symmetryScore += 1 - (diff / 255);
+            count++;
+          }
+        }
+        
+        return count > 0 ? symmetryScore / count : 0;
       };
       
       // Structural similarity (simplified SSIM)
@@ -644,16 +987,16 @@ export default function ImageSearch() {
   };
 
   const getMatchBadgeVariant = (similarity: number): "default" | "secondary" | "destructive" | "outline" => {
-    if (similarity >= 0.75) return 'default'; // Excellent match - blue (75%+)
-    if (similarity >= 0.60) return 'secondary'; // Good match - gray (60-74%)
-    if (similarity >= 0.45) return 'outline'; // Fair match - outlined (45-59%)
-    return 'destructive'; // Poor match - red (30-44%)
+    if (similarity >= 0.85) return 'default'; // Excellent match - blue (85%+)
+    if (similarity >= 0.70) return 'secondary'; // Good match - gray (70-84%)
+    if (similarity >= 0.55) return 'outline'; // Fair match - outlined (55-69%)
+    return 'destructive'; // Poor match - red (45-54%)
   };
 
   const getMatchDescription = (similarity: number) => {
-    if (similarity >= 0.75) return 'Excellent Match';
-    if (similarity >= 0.60) return 'Good Match';
-    if (similarity >= 0.45) return 'Fair Match';
+    if (similarity >= 0.85) return 'Excellent Match';
+    if (similarity >= 0.70) return 'Good Match';
+    if (similarity >= 0.55) return 'Fair Match';
     return 'Possible Match';
   };
 
