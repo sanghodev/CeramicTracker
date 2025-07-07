@@ -130,13 +130,30 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled, is
     if (isGroupBooking) {
       submissionData.isGroup = "true";
       submissionData.groupSize = groupSize;
-      submissionData.groupId = generateGroupId(data.workDate, groupSize);
+      if (!isEditing) {
+        submissionData.groupId = generateGroupId(data.workDate, groupSize);
+      }
     } else {
       submissionData.isGroup = "false";
       submissionData.groupSize = "";
-      submissionData.groupId = "";
+      if (!isEditing) {
+        submissionData.groupId = "";
+      }
     }
     
+    // When editing, only send images if they are new base64 data
+    if (isEditing) {
+      // Keep existing image if it hasn't been changed to a new base64 image
+      if (submissionData.workImage && !submissionData.workImage.startsWith('data:image/')) {
+        // This is an existing filename, don't send it to avoid overwriting
+        delete submissionData.workImage;
+      }
+      
+      if (submissionData.customerImage && !submissionData.customerImage.startsWith('data:image/')) {
+        // This is an existing filename, don't send it to avoid overwriting
+        delete submissionData.customerImage;
+      }
+    }
 
     createCustomerMutation.mutate(submissionData);
   };
@@ -339,19 +356,25 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled, is
       form.setValue("phone", initialData.phone || "");
       form.setValue("email", initialData.email || "");
       form.setValue("workDate", initialData.workDate || new Date().toISOString().split('T')[0]);
+      form.setValue("programType", initialData.programType || "painting");
+      form.setValue("isGroup", initialData.isGroup || "false");
+      form.setValue("groupSize", initialData.groupSize || "");
       
       setPhoneValue(initialData.phone || "");
       setEmailValue(initialData.email || "");
+      setIsGroupBooking(initialData.isGroup === "true" || initialData.isGroup === true);
+      setGroupSize(initialData.groupSize || "2");
       
       if (initialData.workImage) {
-        setWorkImagePreview(initialData.workImage);
-        form.setValue("workImage", initialData.workImage);
+        const workImageUrl = getImageUrl(initialData.workImage);
+        setWorkImagePreview(workImageUrl);
+        form.setValue("workImage", initialData.workImage); // Keep original filename
       }
       
       if (initialData.customerImage) {
-
-        setCustomerImagePreview(initialData.customerImage);
-        form.setValue("customerImage", initialData.customerImage);
+        const customerImageUrl = getImageUrl(initialData.customerImage);
+        setCustomerImagePreview(customerImageUrl);
+        form.setValue("customerImage", initialData.customerImage); // Keep original filename
       }
     }
   }, [initialData, form]);

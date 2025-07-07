@@ -298,8 +298,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const data = req.body;
       
-      // Process images if they are base64 strings
+      // Only process images if they are new base64 strings (not existing filenames)
       if (data.workImage && data.workImage.startsWith('data:image/')) {
+        // Delete old work image file if exists
+        if (existingCustomer.workImage) {
+          try {
+            const oldImagePath = path.join(uploadsDir, existingCustomer.workImage);
+            if (fs.existsSync(oldImagePath)) {
+              fs.unlinkSync(oldImagePath);
+            }
+          } catch (fileError) {
+            console.error("Error deleting old work image:", fileError);
+          }
+        }
+        
+        // Save new work image
         data.workImage = await saveBase64Image(
           data.workImage, 
           'work', 
@@ -308,9 +321,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           data.isGroup || existingCustomer.isGroup,
           data.groupSize || existingCustomer.groupSize
         );
+      } else if (data.workImage === undefined || data.workImage === null || data.workImage === '') {
+        // If workImage is being cleared, keep the existing value
+        data.workImage = existingCustomer.workImage;
       }
       
       if (data.customerImage && data.customerImage.startsWith('data:image/')) {
+        // Delete old customer image file if exists
+        if (existingCustomer.customerImage) {
+          try {
+            const oldImagePath = path.join(uploadsDir, existingCustomer.customerImage);
+            if (fs.existsSync(oldImagePath)) {
+              fs.unlinkSync(oldImagePath);
+            }
+          } catch (fileError) {
+            console.error("Error deleting old customer image:", fileError);
+          }
+        }
+        
+        // Save new customer image
         data.customerImage = await saveBase64Image(
           data.customerImage, 
           'customer', 
@@ -319,6 +348,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           data.isGroup || existingCustomer.isGroup,
           data.groupSize || existingCustomer.groupSize
         );
+      } else if (data.customerImage === undefined || data.customerImage === null || data.customerImage === '') {
+        // If customerImage is being cleared, keep the existing value
+        data.customerImage = existingCustomer.customerImage;
       }
 
       const validatedData = insertCustomerSchema.partial().parse(data);
