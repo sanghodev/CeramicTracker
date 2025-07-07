@@ -1,10 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Clock, Users, Phone, Mail, Image, CheckCircle, MessageCircle, Package } from "lucide-react";
+import { Clock, Users, Phone, Mail, Image, CheckCircle, MessageCircle, Package, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { ImageZoom } from "@/components/ui/image-zoom";
 import { apiRequest } from "@/lib/queryClient";
+import { getImageUrl } from "@/lib/image-utils";
 import type { Customer } from "@shared/schema";
 
 export default function TodayCustomerList() {
