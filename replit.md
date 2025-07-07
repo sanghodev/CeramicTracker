@@ -145,6 +145,12 @@ Key customer fields include:
   - Created MySQL tables with proper snake_case column naming
   - All CRUD operations working in MySQL: create, read, update, delete
   - Customer editing and deletion features fully functional
+- January 7, 2025. Enhanced image storage and download system:
+  - Improved image file naming with group information: CustomerID_GROUP4_DATE_type_timestamp.jpg
+  - Organized files in year/month folder structure (uploads/2025/01/)
+  - Added image download API with date range filtering and ZIP compression
+  - Created image download UI component in Customer Management page
+  - Fixed "save failed" error caused by MySQL schema inconsistency
 
 ## User Preferences
 

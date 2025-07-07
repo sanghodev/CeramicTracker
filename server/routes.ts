@@ -9,6 +9,7 @@ import fs from "fs";
 import { v4 as uuidv4 } from "uuid";
 import sharp from "sharp";
 import express from "express";
+import archiver from "archiver";
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(process.cwd(), 'uploads');
@@ -32,7 +33,7 @@ const upload = multer({
 });
 
 // Helper function to save base64 image with structured naming and folder organization
-async function saveBase64Image(base64Data: string, type: 'work' | 'customer', customerId?: string, workDate?: string): Promise<string> {
+async function saveBase64Image(base64Data: string, type: 'work' | 'customer', customerId?: string, workDate?: string, isGroup?: string, groupSize?: string): Promise<string> {
   // Remove data URL prefix if present
   const base64String = base64Data.replace(/^data:image\/[a-z]+;base64,/, '');
   const buffer = Buffer.from(base64String, 'base64');
@@ -45,7 +46,8 @@ async function saveBase64Image(base64Data: string, type: 'work' | 'customer', cu
     const date = new Date(workDate);
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
-    const dateStr = date.toISOString().split('T')[0].replace(/-/g, ''); // YYYYMMDD
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${year}${month}${day}`; // YYYYMMDD
     const timestamp = Date.now();
     
     // Create year/month subdirectory
@@ -55,7 +57,9 @@ async function saveBase64Image(base64Data: string, type: 'work' | 'customer', cu
       fs.mkdirSync(fullSubDir, { recursive: true });
     }
     
-    filename = `${customerId}_${dateStr}_${type}_${timestamp}.jpg`;
+    // Create descriptive filename with group info
+    const groupInfo = isGroup === 'true' ? `_GROUP${groupSize || ''}` : '_INDIVIDUAL';
+    filename = `${customerId}${groupInfo}_${dateStr}_${type}_${timestamp}.jpg`;
   } else {
     // Fallback to UUID if customerId/workDate not available
     filename = `${type}_${uuidv4()}.jpg`;
@@ -221,7 +225,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           originalWorkImage, 
           'work', 
           customer.customerId, 
-          customer.workDate.toISOString()
+          customer.workDate.toISOString(),
+          customer.isGroup,
+          customer.groupSize
         );
         updatedCustomer = await storage.updateCustomer(customer.id, { workImage: workImageFilename }) || customer;
       }
@@ -231,7 +237,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           originalCustomerImage, 
           'customer', 
           customer.customerId, 
-          customer.workDate.toISOString()
+          customer.workDate.toISOString(),
+          customer.isGroup,
+          customer.groupSize
         );
         updatedCustomer = await storage.updateCustomer(updatedCustomer.id, { customerImage: customerImageFilename }) || updatedCustomer;
       }
@@ -296,7 +304,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           data.workImage, 
           'work', 
           existingCustomer.customerId, 
-          (data.workDate || existingCustomer.workDate).toString()
+          (data.workDate || existingCustomer.workDate).toString(),
+          data.isGroup || existingCustomer.isGroup,
+          data.groupSize || existingCustomer.groupSize
         );
       }
       
@@ -305,7 +315,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           data.customerImage, 
           'customer', 
           existingCustomer.customerId, 
-          (data.workDate || existingCustomer.workDate).toString()
+          (data.workDate || existingCustomer.workDate).toString(),
+          data.isGroup || existingCustomer.isGroup,
+          data.groupSize || existingCustomer.groupSize
         );
       }
 
@@ -478,6 +490,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Vision API error:", error);
       res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Download images by date range
+  app.get("/api/images/download", async (req, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      
+      if (!startDate || !endDate) {
+        return res.status(400).json({ message: "Start date and end date are required" });
+      }
+
+      const start = new Date(startDate as string);
+      const end = new Date(endDate as string);
+      
+      // Get all customers within date range
+      const customers = await storage.getCustomers();
+      const filteredCustomers = customers.filter(customer => {
+        const workDate = new Date(customer.workDate);
+        return workDate >= start && workDate <= end;
+      });
+
+      // Create zip file with images
+      const archive = archiver('zip', { zlib: { level: 9 } });
+      
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', `attachment; filename="images_${startDate}_to_${endDate}.zip"`);
+      
+      archive.pipe(res);
+      
+      // Add images to zip
+      for (const customer of filteredCustomers) {
+        const groupInfo = customer.isGroup === 'true' ? `_GROUP${customer.groupSize || ''}` : '_INDIVIDUAL';
+        const customerDir = `${customer.customerId}${groupInfo}`;
+        
+        if (customer.workImage) {
+          const workImagePath = path.join(uploadsDir, customer.workImage);
+          if (fs.existsSync(workImagePath)) {
+            archive.file(workImagePath, { name: `${customerDir}/${customer.customerId}_work.jpg` });
+          }
+        }
+        
+        if (customer.customerImage) {
+          const customerImagePath = path.join(uploadsDir, customer.customerImage);
+          if (fs.existsSync(customerImagePath)) {
+            archive.file(customerImagePath, { name: `${customerDir}/${customer.customerId}_customer.jpg` });
+          }
+        }
+      }
+      
+      archive.finalize();
+    } catch (error) {
+      console.error("Error downloading images:", error);
+      res.status(500).json({ message: "Failed to download images" });
     }
   });
 

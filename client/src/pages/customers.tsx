@@ -1,5 +1,6 @@
 import { Users } from "lucide-react";
 import PaginatedCustomerList from "@/components/paginated-customer-list";
+import ImageDownload from "@/components/image-download";
 
 export default function Customers() {
   return (
@@ -12,6 +13,11 @@ export default function Customers() {
           </div>
           <h1 className="text-3xl font-bold text-slate-800 mb-2">Customer Management</h1>
           <p className="text-slate-600">Manage all customer registrations and track their progress</p>
+        </div>
+
+        {/* Image Download Section */}
+        <div className="flex justify-center">
+          <ImageDownload />
         </div>
 
         {/* Paginated Customer List */}
