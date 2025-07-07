@@ -57,7 +57,7 @@ function generateCustomerId(workDate: Date, programType?: string): string {
   return `${datePrefix}-${programCode}-${randomSuffix}`;
 }
 
-// Retry operation function
+// Retry operation function with database connection handling
 async function retryOperation<T>(operation: () => Promise<T>, maxRetries: number = 3, delay: number = 1000): Promise<T> {
   let attempts = 0;
   while (true) {
@@ -66,6 +66,17 @@ async function retryOperation<T>(operation: () => Promise<T>, maxRetries: number
     } catch (error: any) {
       attempts++;
       console.error(`Operation failed (attempt ${attempts}): ${error.message}`);
+      
+      // Check if it's a connection error
+      if ((error.code === 'PROTOCOL_CONNECTION_LOST' || 
+           error.code === 'ECONNRESET' || 
+           error.message.includes('connection is in closed state')) && 
+          attempts < maxRetries) {
+        console.log('Database connection issue detected, retrying...');
+        await new Promise(resolve => setTimeout(resolve, delay * attempts));
+        continue;
+      }
+      
       if (attempts >= maxRetries) {
         throw error;
       }
@@ -104,7 +115,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCustomers(): Promise<Customer[]> {
-    return await this.db.select().from(customers).orderBy(desc(customers.createdAt));
+    return await retryOperation(async () => {
+      return await this.db.select().from(customers).orderBy(desc(customers.createdAt));
+    });
   }
 
   async getCustomersPaginated(page: number, limit: number, filter?: CustomerFilter): Promise<PaginatedResult<Customer>> {
@@ -230,15 +243,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateCustomer(id: number, updates: Partial<InsertCustomer>): Promise<Customer | undefined> {
-    await this.db.update(customers).set(updates).where(eq(customers.id, id));
-    const [customer] = await this.db.select().from(customers).where(eq(customers.id, id));
-    return customer || undefined;
+    return await retryOperation(async () => {
+      await this.db.update(customers).set(updates).where(eq(customers.id, id));
+      const [customer] = await this.db.select().from(customers).where(eq(customers.id, id));
+      return customer || undefined;
+    });
   }
 
   async updateCustomerStatus(id: number, status: string): Promise<Customer | undefined> {
-    await this.db.update(customers).set({ status }).where(eq(customers.id, id));
-    const [customer] = await this.db.select().from(customers).where(eq(customers.id, id));
-    return customer || undefined;
+    return await retryOperation(async () => {
+      await this.db.update(customers).set({ status }).where(eq(customers.id, id));
+      const [customer] = await this.db.select().from(customers).where(eq(customers.id, id));
+      return customer || undefined;
+    });
   }
 
   async deleteCustomer(id: number): Promise<boolean> {
