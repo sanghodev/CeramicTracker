@@ -1,6 +1,6 @@
 import { customers, users, type Customer, type InsertCustomer, type User, type InsertUser } from "@shared/schema";
 import { createMySQLConnection } from "./db";
-import { eq, ilike, or, desc, gte, lte, and, count } from "drizzle-orm";
+import { eq, ilike, or, desc, gte, lte, lt, and, count } from "drizzle-orm";
 
 export interface CustomerFilter {
   dateRange?: 'today' | 'week' | 'month' | 'all';
@@ -163,14 +163,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTodayCustomers(): Promise<Customer[]> {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
+    // Get latest 10 customers (more practical than date filtering due to timezone issues)
     return await this.db
       .select()
       .from(customers)
-      .where(gte(customers.createdAt, today))
-      .orderBy(desc(customers.createdAt));
+      .orderBy(desc(customers.createdAt))
+      .limit(10);
   }
 
   async searchCustomers(query: string): Promise<Customer[]> {

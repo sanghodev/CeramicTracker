@@ -52,7 +52,7 @@ export default function TodayCustomerList() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
-            Today's Registrations
+            Recent Registrations
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -90,7 +90,7 @@ export default function TodayCustomerList() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Calendar className="h-5 w-5" />
-          Today's Registrations
+          Recent Registrations
           <Badge variant="secondary" className="ml-auto">
             {customers.length}
           </Badge>
@@ -100,7 +100,7 @@ export default function TodayCustomerList() {
         {customers.length === 0 ? (
           <div className="text-center py-8">
             <Users className="h-12 w-12 mx-auto mb-4 text-slate-300" />
-            <p className="text-slate-500 text-sm">No customers registered today</p>
+            <p className="text-slate-500 text-sm">No recent customers</p>
           </div>
         ) : (
           <div className="space-y-3">

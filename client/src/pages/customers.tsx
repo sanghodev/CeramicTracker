@@ -15,12 +15,15 @@ export default function Customers() {
           <p className="text-slate-600">Manage all customer registrations and track their progress</p>
         </div>
 
-        {/* Image Download Section */}
-        <div className="flex justify-center">
+        {/* Controls Section - Filters and Download */}
+        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+          <div className="text-sm text-slate-600">
+            Comprehensive customer management with search, filters, and bulk operations
+          </div>
           <ImageDownload />
         </div>
 
-        {/* Paginated Customer List */}
+        {/* Paginated Customer List with Filters */}
         <PaginatedCustomerList />
       </div>
     </div>
