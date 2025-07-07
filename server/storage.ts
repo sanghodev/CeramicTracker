@@ -205,8 +205,8 @@ export class DatabaseStorage implements IStorage {
         .select()
         .from(customers)
         .where(and(
-          gte(customers.workDate, today),
-          lt(customers.workDate, tomorrow)
+          gte(customers.createdAt, today),
+          lt(customers.createdAt, tomorrow)
         ))
         .orderBy(desc(customers.createdAt));
     });
@@ -363,8 +363,8 @@ class MemoryStorage implements IStorage {
     tomorrow.setDate(tomorrow.getDate() + 1);
 
     return this.customers.filter(c => {
-      const workDate = new Date(c.workDate);
-      return workDate >= today && workDate < tomorrow;
+      const createdDate = new Date(c.createdAt);
+      return createdDate >= today && createdDate < tomorrow;
     }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
