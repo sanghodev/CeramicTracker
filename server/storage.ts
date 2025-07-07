@@ -22,7 +22,7 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  
+
   // Customer methods
   getCustomer(id: number): Promise<Customer | undefined>;
   getCustomers(): Promise<Customer[]>;
@@ -40,20 +40,20 @@ function generateCustomerId(workDate: Date, programType?: string): string {
   const year = workDate.getFullYear().toString().slice(-2);
   const month = (workDate.getMonth() + 1).toString().padStart(2, '0');
   const day = workDate.getDate().toString().padStart(2, '0');
-  
+
   // Program type codes
   const programCodes: Record<string, string> = {
     'painting': 'P',
     'one_time_ceramic': 'C1',
     'advanced_ceramic': 'C2'
   };
-  
+
   const programCode = programCodes[programType || 'painting'] || 'P';
   const datePrefix = `${year}${month}${day}`;
-  
+
   // Generate a random 3-digit number for uniqueness
   const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-  
+
   return `${datePrefix}-${programCode}-${randomSuffix}`;
 }
 
@@ -98,7 +98,7 @@ export class DatabaseStorage implements IStorage {
     if (filter?.dateRange && filter.dateRange !== 'all') {
       const now = new Date();
       let startDate = new Date();
-      
+
       switch (filter.dateRange) {
         case 'today':
           startDate.setHours(0, 0, 0, 0);
@@ -110,7 +110,7 @@ export class DatabaseStorage implements IStorage {
           startDate.setMonth(now.getMonth() - 1);
           break;
       }
-      
+
       whereConditions.push(gte(customers.createdAt, startDate));
     }
 
@@ -185,19 +185,19 @@ export class DatabaseStorage implements IStorage {
   async createCustomer(insertCustomer: InsertCustomer): Promise<Customer> {
     // Generate unique customer ID
     const customerId = generateCustomerId(insertCustomer.workDate, insertCustomer.programType);
-    
+
     const result = await this.db.insert(customers).values({
       ...insertCustomer,
       customerId
     });
-    
+
     // Get the newly created customer by customerId (more reliable than insertId)
     const [customer] = await this.db.select().from(customers).where(eq(customers.customerId, customerId));
-    
+
     if (!customer) {
       throw new Error("Failed to retrieve created customer");
     }
-    
+
     return customer;
   }
 
