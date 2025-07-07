@@ -23,7 +23,7 @@ This is a full-stack customer management application built for a ceramics studio
 - **Sharp** for image processing
 
 ### Database Schema
-The system uses PostgreSQL with the following main entities:
+The system uses MySQL with the following main entities:
 - **Customers**: Core customer information, work details, and tracking status
 - **Users**: Basic authentication system (currently minimal)
 
