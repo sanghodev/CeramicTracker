@@ -6,11 +6,11 @@ import * as schema from "@shared/schema";
 export async function createMySQLConnection() {
   try {
     const connection = await createConnection({
-      host: process.env.MYSQL_HOST || 'sg2plzcpnl505849.prod.sin2.secureserver.net',
+      host: process.env.GODADDY_MYSQL_HOST || process.env.MYSQL_HOST || 'sg2plzcpnl505849.prod.sin2.secureserver.net',
       port: parseInt(process.env.MYSQL_PORT || '3306'),
-      user: process.env.MYSQL_USER || 'root',
-      password: process.env.MYSQL_PASSWORD || '',
-      database: process.env.MYSQL_DATABASE || 'pottery_studio',
+      user: process.env.GODADDY_MYSQL_USER || process.env.MYSQL_USER || 'root',
+      password: process.env.GODADDY_MYSQL_PASSWORD || process.env.MYSQL_PASSWORD || '',
+      database: process.env.GODADDY_MYSQL_DATABASE || process.env.MYSQL_DATABASE || 'pottery_studio',
     });
     
     return drizzle(connection, { schema, mode: 'default' });
