@@ -193,7 +193,13 @@ export class DatabaseStorage implements IStorage {
       customerId
     });
     
-    const [customer] = await this.db.select().from(customers).where(eq(customers.id, result.insertId));
+    // Get the newly created customer by customerId (more reliable than insertId)
+    const [customer] = await this.db.select().from(customers).where(eq(customers.customerId, customerId));
+    
+    if (!customer) {
+      throw new Error("Failed to retrieve created customer");
+    }
+    
     return customer;
   }
 

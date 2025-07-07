@@ -76,7 +76,8 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled, is
       });
       onSubmitted();
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("Customer save error:", error);
       toast({
         title: isEditing ? "Update Failed" : "Save Failed",
         description: isEditing ? "An error occurred while updating customer information." : "An error occurred while saving customer information.",
