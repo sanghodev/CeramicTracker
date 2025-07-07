@@ -1,20 +1,24 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Users, Search, Phone, Mail, Calendar, MoreVertical, Image } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Users, Search, Phone, Mail, Calendar, MoreVertical, Image, Clock, CheckCircle, MessageCircle, Package } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import type { Customer } from "@shared/schema";
 
 const getStatusColor = (status: string) => {
   switch (status) {
     case "completed":
       return "bg-green-100 text-green-800";
-    case "in_progress":
+    case "ready":
+      return "bg-blue-100 text-blue-800";
+    case "contacted":
       return "bg-yellow-100 text-yellow-800";
     case "waiting":
-      return "bg-blue-100 text-blue-800";
+      return "bg-gray-100 text-gray-800";
     default:
       return "bg-gray-100 text-gray-800";
   }
@@ -23,9 +27,11 @@ const getStatusColor = (status: string) => {
 const getStatusText = (status: string) => {
   switch (status) {
     case "completed":
-      return "Completed";
-    case "in_progress":
-      return "In Progress";
+      return "Pickup Complete";
+    case "ready":
+      return "Ready";
+    case "contacted":
+      return "Contacted";
     case "waiting":
       return "Waiting";
     default:
@@ -35,10 +41,37 @@ const getStatusText = (status: string) => {
 
 export default function CustomerList() {
   const [searchQuery, setSearchQuery] = useState("");
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data: customers = [], isLoading } = useQuery<Customer[]>({
     queryKey: ["/api/customers"],
   });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: string }) => {
+      const response = await apiRequest("PATCH", `/api/customers/${id}/status`, { status });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+      toast({
+        title: "Status Updated",
+        description: "Customer status has been updated successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Update Failed",
+        description: "Failed to update customer status.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleStatusUpdate = (customerId: number, newStatus: string) => {
+    updateStatusMutation.mutate({ id: customerId, status: newStatus });
+  };
 
   const filteredCustomers = customers.filter((customer) =>
     customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -141,7 +174,7 @@ export default function CustomerList() {
                           </Badge>
                         )}
                       </div>
-                      <div className="space-y-1 text-sm text-slate-600">
+                      <div className="space-y-1 text-sm text-slate-600 mb-3">
                         <div className="flex items-center space-x-2">
                           <Phone size={14} className="w-4" />
                           <span>{customer.phone}</span>
@@ -162,11 +195,52 @@ export default function CustomerList() {
                           </div>
                         )}
                       </div>
+                      
+                      {/* Status Update Buttons */}
+                      <div className="grid grid-cols-2 gap-1">
+                        <Button
+                          variant={customer.status === "waiting" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handleStatusUpdate(customer.id, "waiting")}
+                          disabled={updateStatusMutation.isPending}
+                          className="text-xs flex items-center gap-1"
+                        >
+                          <Clock size={12} />
+                          Waiting
+                        </Button>
+                        <Button
+                          variant={customer.status === "ready" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handleStatusUpdate(customer.id, "ready")}
+                          disabled={updateStatusMutation.isPending}
+                          className="text-xs flex items-center gap-1"
+                        >
+                          <CheckCircle size={12} />
+                          Ready
+                        </Button>
+                        <Button
+                          variant={customer.status === "contacted" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handleStatusUpdate(customer.id, "contacted")}
+                          disabled={updateStatusMutation.isPending}
+                          className="text-xs flex items-center gap-1"
+                        >
+                          <MessageCircle size={12} />
+                          Contacted
+                        </Button>
+                        <Button
+                          variant={customer.status === "completed" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handleStatusUpdate(customer.id, "completed")}
+                          disabled={updateStatusMutation.isPending}
+                          className="text-xs flex items-center gap-1"
+                        >
+                          <Package size={12} />
+                          Pickup
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm" className="text-slate-400 hover:text-slate-600 p-2">
-                    <MoreVertical size={16} />
-                  </Button>
                 </div>
               </div>
             ))

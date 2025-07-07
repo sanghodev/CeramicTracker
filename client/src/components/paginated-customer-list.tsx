@@ -68,9 +68,9 @@ export default function PaginatedCustomerList() {
   const getStatusText = (status: string) => {
     const statusMap: Record<string, string> = {
       "waiting": "Waiting",
-      "in_progress": "In Progress", 
       "ready": "Ready",
-      "completed": "Completed"
+      "contacted": "Contacted",
+      "completed": "Pickup Complete"
     };
     return statusMap[status] || status;
   };
@@ -78,8 +78,8 @@ export default function PaginatedCustomerList() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "waiting": return "secondary";
-      case "in_progress": return "default";
-      case "ready": return "outline";
+      case "ready": return "default";
+      case "contacted": return "outline";
       case "completed": return "destructive";
       default: return "secondary";
     }

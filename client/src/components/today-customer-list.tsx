@@ -1,39 +1,88 @@
-import { useQuery } from "@tanstack/react-query";
-import { Calendar, Users, Clock, Phone, Mail } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Clock, Users, Phone, Mail, Image, CheckCircle, MessageCircle, Package } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ImageZoom } from "@/components/ui/image-zoom";
-import { getImageUrl } from "@/lib/image-utils";
+import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { Customer } from "@shared/schema";
 
 export default function TodayCustomerList() {
-  const { data: customers = [], isLoading, error } = useQuery({
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const { data: customers = [], isLoading } = useQuery<Customer[]>({
     queryKey: ["/api/customers/today"],
-    queryFn: async () => {
-      const response = await apiRequest("GET", "/api/customers/today");
-      return await response.json();
-    }
   });
 
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: string }) => {
+      const response = await apiRequest("PATCH", `/api/customers/${id}/status`, { status });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customers/today"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+      toast({
+        title: "Status Updated",
+        description: "Customer status has been updated successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Update Failed",
+        description: "Failed to update customer status.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleStatusUpdate = (customerId: number, newStatus: string) => {
+    updateStatusMutation.mutate({ id: customerId, status: newStatus });
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "completed":
+        return "bg-green-100 text-green-800";
+      case "ready":
+        return "bg-blue-100 text-blue-800";
+      case "contacted":
+        return "bg-yellow-100 text-yellow-800";
+      case "waiting":
+        return "bg-gray-100 text-gray-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
   const getStatusText = (status: string) => {
-    const statusMap: Record<string, string> = {
-      "waiting": "Waiting",
-      "in_progress": "In Progress", 
-      "ready": "Ready",
-      "completed": "Completed"
-    };
-    return statusMap[status] || status;
+    switch (status) {
+      case "completed":
+        return "Pickup Complete";
+      case "ready":
+        return "Ready";
+      case "contacted":
+        return "Contacted";
+      case "waiting":
+        return "Waiting";
+      default:
+        return status;
+    }
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "waiting": return "secondary";
-      case "in_progress": return "default";
-      case "ready": return "outline";
-      case "completed": return "destructive";
-      default: return "secondary";
+      case "completed":
+        return "default";
+      case "ready":
+        return "secondary";
+      case "contacted":
+        return "outline";
+      case "waiting":
+        return "outline";
+      default:
+        return "outline";
     }
   };
 

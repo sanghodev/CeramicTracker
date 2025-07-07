@@ -9,7 +9,7 @@ export const customers = mysqlTable("customers", {
   phone: varchar("phone", { length: 20 }).notNull(),
   email: varchar("email", { length: 255 }),
   workDate: timestamp("work_date").notNull(),
-  status: varchar("status", { length: 20 }).notNull().default("waiting"),
+  status: varchar("status", { length: 20 }).notNull().default("waiting"), // "waiting", "ready", "contacted", "completed"
   programType: varchar("program_type", { length: 50 }).notNull().default("painting"), // "painting", "one_time_ceramic", "advanced_ceramic"
   workImage: varchar("work_image", { length: 255 }), // Image filename
   customerImage: varchar("customer_image", { length: 255 }), // Customer info image filename
