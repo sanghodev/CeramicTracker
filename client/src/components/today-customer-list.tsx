@@ -212,6 +212,50 @@ export default function TodayCustomerList() {
                         <span>Registered: {new Date(customer.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                       </div>
                     </div>
+
+                    {/* Status Update Buttons */}
+                    <div className="mt-3 flex flex-wrap gap-1">
+                      <Button
+                        variant={customer.status === "waiting" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handleStatusUpdate(customer.id, "waiting")}
+                        disabled={updateStatusMutation.isPending}
+                        className="text-xs flex items-center gap-1"
+                      >
+                        <Clock size={12} />
+                        Waiting
+                      </Button>
+                      <Button
+                        variant={customer.status === "ready" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handleStatusUpdate(customer.id, "ready")}
+                        disabled={updateStatusMutation.isPending}
+                        className="text-xs flex items-center gap-1"
+                      >
+                        <CheckCircle size={12} />
+                        Ready
+                      </Button>
+                      <Button
+                        variant={customer.status === "contacted" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handleStatusUpdate(customer.id, "contacted")}
+                        disabled={updateStatusMutation.isPending}
+                        className="text-xs flex items-center gap-1"
+                      >
+                        <MessageCircle size={12} />
+                        Contacted
+                      </Button>
+                      <Button
+                        variant={customer.status === "completed" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handleStatusUpdate(customer.id, "completed")}
+                        disabled={updateStatusMutation.isPending}
+                        className="text-xs flex items-center gap-1"
+                      >
+                        <Package size={12} />
+                        Pickup
+                      </Button>
+                    </div>
                   </div>
 
                   {/* Work Image */}
