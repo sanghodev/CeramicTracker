@@ -57,6 +57,23 @@ function generateCustomerId(workDate: Date, programType?: string): string {
   return `${datePrefix}-${programCode}-${randomSuffix}`;
 }
 
+// Retry operation function
+async function retryOperation<T>(operation: () => Promise<T>, maxRetries: number = 3, delay: number = 1000): Promise<T> {
+  let attempts = 0;
+  while (true) {
+    try {
+      return await operation();
+    } catch (error: any) {
+      attempts++;
+      console.error(`Operation failed (attempt ${attempts}): ${error.message}`);
+      if (attempts >= maxRetries) {
+        throw error;
+      }
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+}
+
 export class DatabaseStorage implements IStorage {
   private db: any;
 
@@ -91,84 +108,95 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCustomersPaginated(page: number, limit: number, filter?: CustomerFilter): Promise<PaginatedResult<Customer>> {
-    const offset = (page - 1) * limit;
-    let whereConditions: any[] = [];
+    return await retryOperation(async () => {
+      const offset = (page - 1) * limit;
 
-    // Date range filtering
-    if (filter?.dateRange && filter.dateRange !== 'all') {
-      const now = new Date();
-      let startDate = new Date();
+      // Build where conditions
+      const conditions = [];
 
-      switch (filter.dateRange) {
-        case 'today':
-          startDate.setHours(0, 0, 0, 0);
-          break;
-        case 'week':
-          startDate.setDate(now.getDate() - 7);
-          break;
-        case 'month':
-          startDate.setMonth(now.getMonth() - 1);
-          break;
+      if (filter?.dateRange && filter.dateRange !== 'all') {
+        const now = new Date();
+        let startDate: Date;
+
+        switch (filter.dateRange) {
+          case 'today':
+            startDate = new Date(now);
+            startDate.setHours(0, 0, 0, 0);
+            break;
+          case 'week':
+            startDate = new Date(now);
+            startDate.setDate(now.getDate() - 7);
+            break;
+          case 'month':
+            startDate = new Date(now);
+            startDate.setMonth(now.getMonth() - 1);
+            break;
+          default:
+            startDate = new Date(0);
+        }
+
+        conditions.push(gte(customers.workDate, startDate));
       }
 
-      whereConditions.push(gte(customers.createdAt, startDate));
-    }
+      if (filter?.status) {
+        conditions.push(eq(customers.status, filter.status));
+      }
 
-    // Status filtering
-    if (filter?.status) {
-      whereConditions.push(eq(customers.status, filter.status));
-    }
+      if (filter?.programType) {
+        conditions.push(eq(customers.programType, filter.programType));
+      }
 
-    // Program type filtering
-    if (filter?.programType) {
-      whereConditions.push(eq(customers.programType, filter.programType));
-    }
-
-    // Search filtering
-    if (filter?.search) {
-      whereConditions.push(
-        or(
+      if (filter?.search) {
+        conditions.push(or(
           ilike(customers.name, `%${filter.search}%`),
-          ilike(customers.phone, `%${filter.search}%`),
-          ilike(customers.email, `%${filter.search}%`),
-          ilike(customers.customerId, `%${filter.search}%`)
-        )
-      );
-    }
+          ilike(customers.customerId, `%${filter.search}%`),
+          ilike(customers.phone, `%${filter.search}%`)
+        ));
+      }
 
-    const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    // Get total count
-    const [totalResult] = await this.db
-      .select({ count: count() })
-      .from(customers)
-      .where(whereClause);
+      // Get total count
+      const [{ count: totalCount }] = await this.db
+        .select({ count: count() })
+        .from(customers)
+        .where(whereClause);
 
-    // Get paginated data
-    const data = await this.db
-      .select()
-      .from(customers)
-      .where(whereClause)
-      .orderBy(desc(customers.createdAt))
-      .limit(limit)
-      .offset(offset);
+      // Get paginated data
+      const data = await this.db
+        .select()
+        .from(customers)
+        .where(whereClause)
+        .orderBy(desc(customers.createdAt))
+        .limit(limit)
+        .offset(offset);
 
-    return {
-      data,
-      total: totalResult.count,
-      page,
-      limit,
-      totalPages: Math.ceil(totalResult.count / limit)
-    };
+      return {
+        data,
+        total: totalCount,
+        page,
+        limit,
+        totalPages: Math.ceil(totalCount / limit)
+      };
+    });
   }
 
   async getTodayCustomers(): Promise<Customer[]> {
-    // Get latest 10 customers (more practical than date filtering due to timezone issues)
-    return await this.db
-      .select()
-      .from(customers)
-      .orderBy(desc(customers.createdAt))
-      .limit(10);
+    return await retryOperation(async () => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      return await this.db
+        .select()
+        .from(customers)
+        .where(and(
+          gte(customers.workDate, today),
+          lt(customers.workDate, tomorrow)
+        ))
+        .orderBy(desc(customers.createdAt));
+    });
   }
 
   async searchCustomers(query: string): Promise<Customer[]> {
