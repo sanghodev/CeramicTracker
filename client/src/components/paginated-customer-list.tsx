@@ -27,8 +27,8 @@ export default function PaginatedCustomerList() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [dateRange, setDateRange] = useState("all");
-  const [status, setStatus] = useState("");
-  const [programType, setProgramType] = useState("");
+  const [status, setStatus] = useState("all");
+  const [programType, setProgramType] = useState("all");
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const limit = 20; // More rows for Excel-like view
 
@@ -40,8 +40,8 @@ export default function PaginatedCustomerList() {
         limit: limit.toString(),
         ...(search && { search }),
         ...(dateRange !== "all" && { dateRange }),
-        ...(status && { status }),
-        ...(programType && { programType })
+        ...(status !== "all" && { status }),
+        ...(programType !== "all" && { programType })
       });
 
       const response = await apiRequest("GET", `/api/customers/paginated?${params}`);
@@ -176,7 +176,7 @@ export default function PaginatedCustomerList() {
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Status</SelectItem>
+              <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="waiting">Waiting</SelectItem>
               <SelectItem value="ready">Ready</SelectItem>
               <SelectItem value="contacted">Contacted</SelectItem>
@@ -189,7 +189,7 @@ export default function PaginatedCustomerList() {
               <SelectValue placeholder="Program" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Programs</SelectItem>
+              <SelectItem value="all">All Programs</SelectItem>
               <SelectItem value="painting">Painting</SelectItem>
               <SelectItem value="one_time_ceramic">Ceramic</SelectItem>
               <SelectItem value="advanced_ceramic">Adv.Ceramic</SelectItem>
