@@ -1,29 +1,16 @@
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { 
-  Search, 
-  Filter, 
-  ChevronLeft, 
-  ChevronRight, 
-  Users,
-  Calendar,
-  Clock,
-  Phone,
-  Mail,
-  Package,
-  Edit,
-  X
-} from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Search, Edit2, Save, X, Users, Download, Calendar, Filter, Clock, CheckCircle, MessageCircle, Package, Phone, Mail, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ImageZoom } from "@/components/ui/image-zoom";
-import { getImageUrl } from "@/lib/image-utils";
 import { apiRequest } from "@/lib/queryClient";
-import CustomerForm from "@/components/customer-form";
+import { useToast } from "@/hooks/use-toast";
+import { getImageUrl } from "@/lib/image-utils";
 import type { Customer } from "@shared/schema";
 
 interface PaginatedResult {
@@ -36,13 +23,14 @@ interface PaginatedResult {
 
 export default function PaginatedCustomerList() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [dateRange, setDateRange] = useState("all");
   const [status, setStatus] = useState("");
   const [programType, setProgramType] = useState("");
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
-  const limit = 15; // Compact list for better performance
+  const limit = 20; // More rows for Excel-like view
 
   const { data: result, isLoading, error } = useQuery({
     queryKey: ["/api/customers/paginated", page, search, dateRange, status, programType],
@@ -55,7 +43,7 @@ export default function PaginatedCustomerList() {
         ...(status && { status }),
         ...(programType && { programType })
       });
-      
+
       const response = await apiRequest("GET", `/api/customers/paginated?${params}`);
       return await response.json() as PaginatedResult;
     }
@@ -65,371 +53,317 @@ export default function PaginatedCustomerList() {
   const totalPages = result?.totalPages || 1;
   const total = result?.total || 0;
 
-  const getStatusText = (status: string) => {
-    const statusMap: Record<string, string> = {
-      "waiting": "Waiting",
-      "ready": "Ready",
-      "contacted": "Contacted",
-      "completed": "Pickup Complete"
-    };
-    return statusMap[status] || status;
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: string }) => {
+      const response = await apiRequest("PATCH", `/api/customers/${id}/status`, { status });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customers/paginated"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+      toast({
+        title: "Status Updated",
+        description: "Customer status has been updated successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Update Failed",
+        description: "Failed to update customer status.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleStatusUpdate = (customerId: number, newStatus: string) => {
+    updateStatusMutation.mutate({ id: customerId, status: newStatus });
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
-      case "waiting": return "secondary";
-      case "ready": return "default";
-      case "contacted": return "outline";
-      case "completed": return "destructive";
-      default: return "secondary";
+      case "completed": return "bg-green-100 text-green-800 border-green-200";
+      case "ready": return "bg-blue-100 text-blue-800 border-blue-200";
+      case "contacted": return "bg-yellow-100 text-yellow-800 border-yellow-200";
+      case "waiting": return "bg-gray-100 text-gray-800 border-gray-200";
+      default: return "bg-gray-100 text-gray-800 border-gray-200";
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case "completed": return "Complete";
+      case "ready": return "Ready";
+      case "contacted": return "Contacted";
+      case "waiting": return "Waiting";
+      default: return status;
     }
   };
 
   const getProgramTypeText = (programType: string) => {
-    const typeMap: Record<string, string> = {
-      "painting": "Painting",
-      "one_time_ceramic": "One-time Ceramic",
-      "advanced_ceramic": "Advanced Ceramic"
-    };
-    return typeMap[programType] || programType;
+    switch (programType) {
+      case "painting": return "Painting";
+      case "one_time_ceramic": return "Ceramic";
+      case "advanced_ceramic": return "Adv.Ceramic";
+      default: return programType;
+    }
   };
 
-  const resetFilters = () => {
-    setSearch("");
-    setDateRange("all");
-    setStatus("");
-    setProgramType("");
-    setPage(1);
-  };
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setPage(1); // Reset to first page when searching
-  };
-
-  const handleEditCustomer = (customer: Customer) => {
-    setEditingCustomer(customer);
-  };
-
-  const handleEditCancel = () => {
-    setEditingCustomer(null);
-  };
-
-  const handleEditSubmit = () => {
-    setEditingCustomer(null);
-    // Refresh the data
-    queryClient.invalidateQueries({ queryKey: ["/api/customers/paginated"] });
-  };
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Customer Management</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">Loading customers...</div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (error) {
     return (
       <Card>
-        <CardContent className="pt-6 text-center">
-          <div className="text-slate-500">
-            <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Unable to load customers</p>
-            <Button onClick={() => window.location.reload()} variant="outline" className="mt-4">
-              Retry
-            </Button>
-          </div>
+        <CardHeader>
+          <CardTitle>Customer Management</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-red-500">Failed to load customers</div>
         </CardContent>
       </Card>
-    );
-  }
-
-  // Show edit form if editing
-  if (editingCustomer) {
-    return (
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Edit className="h-5 w-5" />
-                Edit Customer: {editingCustomer.name}
-              </CardTitle>
-              <Button onClick={handleEditCancel} variant="outline" size="sm">
-                <X className="h-4 w-4 mr-2" />
-                Cancel
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <CustomerForm 
-              initialData={editingCustomer}
-              onSubmitted={handleEditSubmit}
-              onCancelled={handleEditCancel}
-              isEditing={true}
-            />
-          </CardContent>
-        </Card>
-      </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Filters and Search */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filter & Search
-            {total > 0 && (
-              <Badge variant="secondary" className="ml-auto">
-                {total} customers
-              </Badge>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {/* Search Bar */}
-            <form onSubmit={handleSearchSubmit} className="flex gap-2">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  placeholder="Search by name, phone, email, or ID..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <Button type="submit" variant="outline">
-                Search
-              </Button>
-            </form>
-
-            {/* Filter Controls */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <Select value={dateRange} onValueChange={setDateRange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Date Range" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Time</SelectItem>
-                  <SelectItem value="today">Today</SelectItem>
-                  <SelectItem value="week">This Week</SelectItem>
-                  <SelectItem value="month">This Month</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={status || "all_statuses"} onValueChange={(value) => setStatus(value === "all_statuses" ? "" : value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all_statuses">All Statuses</SelectItem>
-                  <SelectItem value="waiting">Waiting</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="ready">Ready</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={programType || "all_programs"} onValueChange={(value) => setProgramType(value === "all_programs" ? "" : value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Program Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all_programs">All Programs</SelectItem>
-                  <SelectItem value="painting">Painting</SelectItem>
-                  <SelectItem value="one_time_ceramic">One-time Ceramic</SelectItem>
-                  <SelectItem value="advanced_ceramic">Advanced Ceramic</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Button onClick={resetFilters} variant="outline" className="w-full">
-                Clear Filters
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Customer List */}
-      <Card>
-        <CardHeader>
+    <Card className="w-full">
+      <CardHeader className="pb-4">
+        <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
             Customer Management
+            <Badge variant="secondary" className="ml-2">
+              {total} total
+            </Badge>
           </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="space-y-3">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="flex items-center space-x-3 p-3 border rounded-lg">
-                  <Skeleton className="h-10 w-10 rounded-lg" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-32" />
-                    <Skeleton className="h-3 w-48" />
-                  </div>
-                  <Skeleton className="h-10 w-10 rounded-lg" />
-                </div>
-              ))}
-            </div>
-          ) : customers.length === 0 ? (
-            <div className="text-center py-12">
-              <Users className="h-16 w-16 mx-auto mb-4 text-slate-300" />
-              <p className="text-slate-500 text-lg mb-2">No customers found</p>
-              <p className="text-slate-400 text-sm">Try adjusting your filters or search terms</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {customers.map((customer: Customer) => (
-                <div key={customer.id} className="border rounded-lg p-3 hover:bg-slate-50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    {/* Customer Image */}
-                    <div className="flex-shrink-0">
-                      {customer.customerImage ? (
+        </div>
+
+        {/* Filters */}
+        <div className="flex flex-wrap gap-2 pt-4">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
+            <Input
+              placeholder="Search customers..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          <Select value={dateRange} onValueChange={setDateRange}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Date Range" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Dates</SelectItem>
+              <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="week">This Week</SelectItem>
+              <SelectItem value="month">This Month</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={status} onValueChange={setStatus}>
+            <SelectTrigger className="w-[120px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All Status</SelectItem>
+              <SelectItem value="waiting">Waiting</SelectItem>
+              <SelectItem value="ready">Ready</SelectItem>
+              <SelectItem value="contacted">Contacted</SelectItem>
+              <SelectItem value="completed">Complete</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={programType} onValueChange={setProgramType}>
+            <SelectTrigger className="w-[130px]">
+              <SelectValue placeholder="Program" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All Programs</SelectItem>
+              <SelectItem value="painting">Painting</SelectItem>
+              <SelectItem value="one_time_ceramic">Ceramic</SelectItem>
+              <SelectItem value="advanced_ceramic">Adv.Ceramic</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </CardHeader>
+
+      <CardContent className="p-0">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-slate-50">
+                <TableHead className="w-[60px]">Image</TableHead>
+                <TableHead className="w-[100px]">ID</TableHead>
+                <TableHead className="w-[150px]">Name</TableHead>
+                <TableHead className="w-[120px]">Phone</TableHead>
+                <TableHead className="w-[180px]">Email</TableHead>
+                <TableHead className="w-[100px]">Work Date</TableHead>
+                <TableHead className="w-[80px]">Program</TableHead>
+                <TableHead className="w-[80px]">Group</TableHead>
+                <TableHead className="w-[90px]">Status</TableHead>
+                <TableHead className="w-[250px]">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {customers.map((customer) => (
+                <TableRow key={customer.id} className="hover:bg-slate-50">
+                  <TableCell className="p-2">
+                    <div className="flex gap-1">
+                      {customer.customerImage && (
                         <ImageZoom
                           src={getImageUrl(customer.customerImage) || ''}
-                          alt={`${customer.name}'s photo`}
-                          thumbnailClassName="w-10 h-10 border border-slate-200 hover:border-slate-400 transition-colors"
+                          alt="Customer"
+                          thumbnailClassName="w-6 h-6 border border-slate-200 hover:border-slate-400 transition-colors"
                         />
-                      ) : (
-                        <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
-                          <Users className="h-5 w-5 text-slate-400" />
-                        </div>
                       )}
-                    </div>
-
-                    {/* Customer Info - Compact */}
-                    <div className="flex-1 min-w-0 grid grid-cols-1 lg:grid-cols-4 gap-2 lg:gap-4">
-                      {/* Name & ID */}
-                      <div className="min-w-0">
-                        <h3 className="font-semibold text-slate-800 truncate text-sm">{customer.name}</h3>
-                        <p className="text-xs text-slate-500 truncate">{customer.customerId}</p>
-                      </div>
-
-                      {/* Contact */}
-                      <div className="min-w-0">
-                        {customer.phone && (
-                          <div className="flex items-center gap-1 text-xs text-slate-600 mb-1">
-                            <Phone className="h-3 w-3 flex-shrink-0" />
-                            <span className="truncate">{customer.phone}</span>
-                          </div>
-                        )}
-                        {customer.email && (
-                          <div className="flex items-center gap-1 text-xs text-slate-600">
-                            <Mail className="h-3 w-3 flex-shrink-0" />
-                            <span className="truncate">{customer.email}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Dates */}
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1 text-xs text-slate-600 mb-1">
-                          <Calendar className="h-3 w-3 flex-shrink-0" />
-                          <span className="truncate">Work: {new Date(customer.workDate).toLocaleDateString()}</span>
-                        </div>
-                        <div className="flex items-center gap-1 text-xs text-slate-500">
-                          <Clock className="h-3 w-3 flex-shrink-0" />
-                          <span className="truncate">Reg: {new Date(customer.createdAt).toLocaleDateString()}</span>
-                        </div>
-                      </div>
-
-                      {/* Status & Program */}
-                      <div className="flex flex-wrap gap-1 items-start">
-                        <Badge variant={getStatusBadge(customer.status)} className="text-xs">
-                          {getStatusText(customer.status)}
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          <Package className="h-3 w-3 mr-1" />
-                          {getProgramTypeText(customer.programType)}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    {/* Work Image */}
-                    <div className="flex-shrink-0">
-                      {customer.workImage ? (
+                      {customer.workImage && (
                         <ImageZoom
                           src={getImageUrl(customer.workImage) || ''}
-                          alt={`${customer.name}'s artwork`}
-                          thumbnailClassName="w-10 h-10 border border-green-200 hover:border-green-400 transition-colors"
+                          alt="Work"
+                          thumbnailClassName="w-6 h-6 border border-green-200 hover:border-green-400 transition-colors"
                         />
-                      ) : (
-                        <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
-                          <Package className="h-5 w-5 text-slate-400" />
+                      )}
+                      {!customer.customerImage && !customer.workImage && (
+                        <div className="w-6 h-6 bg-slate-100 border border-slate-200 rounded flex items-center justify-center">
+                          <Image size={12} className="text-slate-400" />
                         </div>
                       )}
                     </div>
+                  </TableCell>
 
-                    {/* Edit Button */}
-                    <div className="flex-shrink-0">
+                  <TableCell className="font-mono text-xs p-2">
+                    {customer.customerId}
+                  </TableCell>
+
+                  <TableCell className="font-medium p-2">
+                    {customer.name}
+                  </TableCell>
+
+                  <TableCell className="text-sm p-2">
+                    {customer.phone}
+                  </TableCell>
+
+                  <TableCell className="text-sm p-2 max-w-[180px] truncate">
+                    {customer.email || "-"}
+                  </TableCell>
+
+                  <TableCell className="text-sm p-2">
+                    {new Date(customer.workDate).toLocaleDateString('en-US', { 
+                      month: 'short', 
+                      day: 'numeric' 
+                    })}
+                  </TableCell>
+
+                  <TableCell className="p-2">
+                    <Badge variant="outline" className="text-xs">
+                      {getProgramTypeText(customer.programType)}
+                    </Badge>
+                  </TableCell>
+
+                  <TableCell className="p-2">
+                    {customer.isGroup === "true" ? (
+                      <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-800">
+                        {customer.groupSize}
+                      </Badge>
+                    ) : (
+                      <span className="text-xs text-slate-500">-</span>
+                    )}
+                  </TableCell>
+
+                  <TableCell className="p-2">
+                    <Badge 
+                      variant="outline" 
+                      className={`text-xs ${getStatusColor(customer.status)}`}
+                    >
+                      {getStatusText(customer.status)}
+                    </Badge>
+                  </TableCell>
+
+                  <TableCell className="p-2">
+                    <div className="flex gap-1">
                       <Button
-                        variant="outline"
+                        variant={customer.status === "waiting" ? "default" : "outline"}
                         size="sm"
-                        onClick={() => handleEditCustomer(customer)}
-                        className="h-8 px-2"
+                        onClick={() => handleStatusUpdate(customer.id, "waiting")}
+                        disabled={updateStatusMutation.isPending}
+                        className="h-6 px-2 text-xs"
                       >
-                        <Edit className="h-4 w-4" />
+                        <Clock size={10} />
+                      </Button>
+                      <Button
+                        variant={customer.status === "ready" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handleStatusUpdate(customer.id, "ready")}
+                        disabled={updateStatusMutation.isPending}
+                        className="h-6 px-2 text-xs"
+                      >
+                        <CheckCircle size={10} />
+                      </Button>
+                      <Button
+                        variant={customer.status === "contacted" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handleStatusUpdate(customer.id, "contacted")}
+                        disabled={updateStatusMutation.isPending}
+                        className="h-6 px-2 text-xs"
+                      >
+                        <MessageCircle size={10} />
+                      </Button>
+                      <Button
+                        variant={customer.status === "completed" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handleStatusUpdate(customer.id, "completed")}
+                        disabled={updateStatusMutation.isPending}
+                        className="h-6 px-2 text-xs"
+                      >
+                        <Package size={10} />
                       </Button>
                     </div>
-                  </div>
-                </div>
+                  </TableCell>
+                </TableRow>
               ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            </TableBody>
+          </Table>
+        </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-slate-600">
-                Page {page} of {totalPages} ({total} total customers)
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage(page - 1)}
-                  disabled={page === 1}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Previous
-                </Button>
-                
-                {/* Page Numbers */}
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    const pageNum = Math.max(1, Math.min(totalPages - 4, page - 2)) + i;
-                    if (pageNum > totalPages) return null;
-                    
-                    return (
-                      <Button
-                        key={pageNum}
-                        variant={pageNum === page ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setPage(pageNum)}
-                        className="w-8 h-8 p-0"
-                      >
-                        {pageNum}
-                      </Button>
-                    );
-                  })}
-                </div>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage(page + 1)}
-                  disabled={page === totalPages}
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+        {/* Pagination */}
+        <div className="flex items-center justify-between px-4 py-3 border-t">
+          <div className="text-sm text-slate-600">
+            Showing {((page - 1) * limit) + 1} to {Math.min(page * limit, total)} of {total} customers
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(page - 1)}
+              disabled={page <= 1}
+            >
+              Previous
+            </Button>
+            <span className="flex items-center px-3 text-sm">
+              Page {page} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(page + 1)}
+              disabled={page >= totalPages}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
