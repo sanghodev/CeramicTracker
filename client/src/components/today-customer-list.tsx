@@ -14,7 +14,7 @@ export default function TodayCustomerList() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: customers = [], isLoading } = useQuery<Customer[]>({
+  const { data: customers = [], isLoading, error } = useQuery<Customer[]>({
     queryKey: ["/api/customers/today"],
   });
 
