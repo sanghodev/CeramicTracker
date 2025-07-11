@@ -16,6 +16,9 @@ export const customers = mysqlTable("customers", {
   isGroup: text("is_group").default("false").notNull(), // "true" or "false"
   groupId: varchar("group_id", { length: 20 }), // Format: YYMMDD-XYZ (e.g., 250606-2A01)
   groupSize: text("group_size"), // Store as text to avoid type issues
+  groupPickupType: varchar("group_pickup_type", { length: 20 }).default("representative"), // "representative" or "individual"
+  groupRepresentative: varchar("group_representative", { length: 100 }), // Representative name for group pickup
+  groupRepresentativePhone: varchar("group_representative_phone", { length: 20 }), // Representative phone
   contactStatus: varchar("contact_status", { length: 20 }).notNull().default("not_contacted"), // "not_contacted", "contacted", "confirmed"
   storageLocation: varchar("storage_location", { length: 100 }), // Where artwork is stored
   pickupStatus: varchar("pickup_status", { length: 20 }).notNull().default("not_picked_up"), // "not_picked_up", "picked_up"

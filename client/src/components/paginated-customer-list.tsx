@@ -31,8 +31,9 @@ export default function PaginatedCustomerList() {
   const [programType, setProgramType] = useState("all");
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const limit = 20; // More rows for Excel-like view
+  const [viewMode, setViewMode] = useState<"list" | "group">("list");
 
-  const { data: result, isLoading, error } = useQuery({
+  const { data: result, isLoading, error, refetch } = useQuery({
     queryKey: ["/api/customers/paginated", page, search, dateRange, status, programType],
     queryFn: async () => {
       const params = new URLSearchParams({

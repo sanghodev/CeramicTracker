@@ -66,7 +66,7 @@ async function retryOperation<T>(operation: () => Promise<T>, maxRetries: number
     } catch (error: any) {
       attempts++;
       console.error(`Operation failed (attempt ${attempts}): ${error.message}`);
-      
+
       // Check if it's a connection error
       if ((error.code === 'PROTOCOL_CONNECTION_LOST' || 
            error.code === 'ECONNRESET' || 
@@ -76,7 +76,7 @@ async function retryOperation<T>(operation: () => Promise<T>, maxRetries: number
         await new Promise(resolve => setTimeout(resolve, delay * attempts));
         continue;
       }
-      
+
       if (attempts >= maxRetries) {
         throw error;
       }
@@ -118,6 +118,46 @@ export class DatabaseStorage implements IStorage {
     return await retryOperation(async () => {
       return await this.db.select().from(customers).orderBy(desc(customers.createdAt));
     });
+  }
+
+  async getGroupCustomers(groupId: string): Promise<Customer[]> {
+    return await retryOperation(async () => {
+      return await this.db
+        .select()
+        .from(customers)
+        .where(eq(customers.groupId, groupId))
+        .orderBy(desc(customers.createdAt));
+    });
+  }
+
+  async getGroupsByDate(date: Date): Promise<{[groupId: string]: Customer[]}> {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const allCustomers = await retryOperation(async () => {
+      return await this.db
+        .select()
+        .from(customers)
+        .where(and(
+          gte(customers.workDate, startOfDay),
+          lte(customers.workDate, endOfDay),
+          eq(customers.isGroup, "true")
+        ));
+    });
+
+    const groups: {[groupId: string]: Customer[]} = {};
+    allCustomers.forEach(customer => {
+      if (customer.groupId) {
+        if (!groups[customer.groupId]) {
+          groups[customer.groupId] = [];
+        }
+        groups[customer.groupId].push(customer);
+      }
+    });
+
+    return groups;
   }
 
   async getCustomersPaginated(page: number, limit: number, filter?: CustomerFilter): Promise<PaginatedResult<Customer>> {
@@ -294,6 +334,34 @@ class MemoryStorage implements IStorage {
 
   async getCustomers(): Promise<Customer[]> {
     return [...this.customers].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getGroupCustomers(groupId: string): Promise<Customer[]> {
+    return this.customers.filter(c => c.groupId === groupId);
+  }
+
+  async getGroupsByDate(date: Date): Promise<{[groupId: string]: Customer[]}> {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const allCustomers = this.customers.filter(c => {
+      const workDate = new Date(c.workDate);
+      return workDate >= startOfDay && workDate <= endOfDay && c.isGroup === "true";
+    });
+
+    const groups: {[groupId: string]: Customer[]} = {};
+    allCustomers.forEach(customer => {
+      if (customer.groupId) {
+        if (!groups[customer.groupId]) {
+          groups[customer.groupId] = [];
+        }
+        groups[customer.groupId].push(customer);
+      }
+    });
+
+    return groups;
   }
 
   async getCustomersPaginated(page: number, limit: number, filter?: CustomerFilter): Promise<PaginatedResult<Customer>> {
@@ -476,5 +544,7 @@ export const storage = {
   },
   async deleteCustomer(id: number) { 
     return (await getStorage()).deleteCustomer(id); 
-  }
+  },
+  async getGroupCustomers(groupId: string) { return (await getStorage()).getGroupCustomers(groupId); },
+  async getGroupsByDate(date: Date) { return (await getStorage()).getGroupsByDate(date); }
 };

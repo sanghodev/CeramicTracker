@@ -39,6 +39,7 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled, is
   const [customerImagePreview, setCustomerImagePreview] = useState<string | null>(getImageUrl(initialData?.customerImage) || null);
   const [isGroupBooking, setIsGroupBooking] = useState(initialData?.isGroup === "true" || initialData?.isGroup === true);
   const [groupSize, setGroupSize] = useState(initialData?.groupSize || "2");
+  const [groupPickupType, setGroupPickupType] = useState("representative");
   const [showWorkCamera, setShowWorkCamera] = useState(false);
   const workVideoRef = useRef<HTMLVideoElement>(null);
   const workCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -114,19 +115,19 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled, is
     const year = date.getFullYear().toString().slice(-2);
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const day = date.getDate().toString().padStart(2, '0');
-    
+
     // Generate group letter (A, B, C, etc.)
     const groupLetter = String.fromCharCode(65 + Math.floor(Math.random() * 26));
-    
+
     // Generate sequential number (01, 02, etc.)
     const sequentialNumber = '01'; // This would be calculated based on existing groups for the day
-    
+
     return `${year}${month}${day}-${groupSize}${groupLetter}${sequentialNumber}`;
   };
 
   const onSubmit = (data: FormData) => {
     const submissionData = { ...data };
-    
+
     if (isGroupBooking) {
       submissionData.isGroup = "true";
       submissionData.groupSize = groupSize;
@@ -140,7 +141,7 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled, is
         submissionData.groupId = "";
       }
     }
-    
+
     // When editing, only send images if they are new base64 data
     if (isEditing) {
       // Keep existing image if it hasn't been changed to a new base64 image
@@ -148,7 +149,7 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled, is
         // This is an existing filename, don't send it to avoid overwriting
         delete submissionData.workImage;
       }
-      
+
       if (submissionData.customerImage && !submissionData.customerImage.startsWith('data:image/')) {
         // This is an existing filename, don't send it to avoid overwriting
         delete submissionData.customerImage;
@@ -221,7 +222,7 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled, is
 
       if (workVideoRef.current && stream) {
         workVideoRef.current.srcObject = stream;
-        
+
         // Wait for video to load and then play
         workVideoRef.current.onloadedmetadata = async () => {
           try {
@@ -249,9 +250,9 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled, is
     } catch (error) {
       setShowWorkCamera(false);
       console.error("Camera error:", error);
-      
+
       let errorMessage = "Unable to access camera. ";
-      
+
       if (error instanceof DOMException) {
         if (error.name === 'NotAllowedError') {
           errorMessage += "Please allow camera permissions in your browser settings and try again.";
@@ -267,7 +268,7 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled, is
       } else {
         errorMessage += "Please check permissions and try again, or use the upload option.";
       }
-      
+
       toast({
         title: "Camera Access Failed",
         description: errorMessage,
@@ -297,7 +298,7 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled, is
 
     const canvas = workCanvasRef.current;
     const video = workVideoRef.current;
-    
+
     // Ensure video has dimensions
     if (video.videoWidth === 0 || video.videoHeight === 0) {
       toast({
@@ -315,17 +316,17 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled, is
     if (ctx) {
       // Draw the current video frame to canvas
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      
+
       // Convert to base64 image data
       const imageData = canvas.toDataURL('image/jpeg', 0.8);
-      
+
       // Update preview and form
       setWorkImagePreview(imageData);
       field.onChange(imageData);
-      
+
       // Stop camera
       stopWorkCamera();
-      
+
       toast({
         title: "Photo Captured",
         description: "Work photo has been captured successfully.",
@@ -351,7 +352,7 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled, is
         customerImage: initialData.customerImage ? "IMAGE_DATA_PRESENT" : "NO_IMAGE",
         workImage: initialData.workImage ? "IMAGE_DATA_PRESENT" : "NO_IMAGE"
       });
-      
+
       form.setValue("name", initialData.name || "");
       form.setValue("phone", initialData.phone || "");
       form.setValue("email", initialData.email || "");
@@ -359,18 +360,18 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled, is
       form.setValue("programType", initialData.programType || "painting");
       form.setValue("isGroup", initialData.isGroup || "false");
       form.setValue("groupSize", initialData.groupSize || "");
-      
+
       setPhoneValue(initialData.phone || "");
       setEmailValue(initialData.email || "");
       setIsGroupBooking(initialData.isGroup === "true" || initialData.isGroup === true);
       setGroupSize(initialData.groupSize || "2");
-      
+
       if (initialData.workImage) {
         const workImageUrl = getImageUrl(initialData.workImage);
         setWorkImagePreview(workImageUrl);
         form.setValue("workImage", initialData.workImage); // Keep original filename
       }
-      
+
       if (initialData.customerImage) {
         const customerImageUrl = getImageUrl(initialData.customerImage);
         setCustomerImagePreview(customerImageUrl);
@@ -526,49 +527,108 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled, is
 
             {/* Group Size Selection */}
             {isGroupBooking && (
-              <div className="space-y-3">
-                <label className="text-sm font-semibold text-slate-700">Group Size</label>
-                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-3">
-                  {[2, 3, 4, 5, 6].map((size) => (
-                    <Button
-                      key={size}
-                      type="button"
-                      size="sm"
-                      variant={groupSize === size.toString() ? "default" : "outline"}
-                      onClick={() => {
-                        setGroupSize(size.toString());
-                        form.setValue("groupSize", size.toString());
-                      }}
-                      className="text-xs"
-                    >
-                      {size}
-                    </Button>
-                  ))}
-                </div>
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-xs text-slate-600">Or enter group size directly:</label>
+                  <label className="text-sm font-semibold text-slate-700">
+                    Group Size
+                  </label>
                   <Input
-                    type="tel"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    min="1"
-                    max="50"
-                    placeholder="Enter group size (1-50)"
+                    type="number"
+                    min="2"
+                    max="20"
                     value={groupSize}
                     onChange={(e) => {
-                      const value = e.target.value.replace(/[^0-9]/g, '');
-                      if (value && parseInt(value) >= 1 && parseInt(value) <= 50) {
-                        setGroupSize(value);
-                        form.setValue("groupSize", value);
-                      } else if (!value) {
-                        setGroupSize("");
-                        form.setValue("groupSize", "");
-                      }
+                      setGroupSize(e.target.value);
+                      form.setValue("groupSize", e.target.value);
                     }}
-                    className="w-full py-3 px-4 text-lg"
-                    style={{ fontSize: '16px' }}
+                    className="text-base"
+                    placeholder="Number of people"
                   />
                 </div>
+
+                {/* Group Pickup Type */}
+                <div className="space-y-3">
+                  <label className="text-sm font-semibold text-slate-700">
+                    Pickup Method
+                  </label>
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-slate-50">
+                      <input
+                        type="radio"
+                        name="groupPickupType"
+                        value="representative"
+                        checked={groupPickupType === "representative"}
+                        onChange={(e) => {
+                          setGroupPickupType(e.target.value);
+                          form.setValue("groupPickupType", e.target.value);
+                        }}
+                        className="w-4 h-4 text-primary"
+                      />
+                      <div>
+                        <div className="font-medium text-sm">Representative Pickup</div>
+                        <div className="text-xs text-slate-500">One person picks up all group items</div>
+                      </div>
+                    </label>
+                    <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-slate-50">
+                      <input
+                        type="radio"
+                        name="groupPickupType"
+                        value="individual"
+                        checked={groupPickupType === "individual"}
+                        onChange={(e) => {
+                          setGroupPickupType(e.target.value);
+                          form.setValue("groupPickupType", e.target.value);
+                        }}
+                        className="w-4 h-4 text-primary"
+                      />
+                      <div>
+                        <div className="font-medium text-sm">Individual Pickup</div>
+                        <div className="text-xs text-slate-500">Each person registered separately but grouped together</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Representative Info (only for representative pickup) */}
+                {groupPickupType === "representative" && (
+                  <div className="space-y-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="text-sm font-medium text-blue-800">Representative Information</div>
+                    <FormField
+                      control={form.control}
+                      name="groupRepresentative"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-blue-700">Representative Name</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="Name of person picking up all items" 
+                              className="bg-white border-blue-300 focus:border-blue-500"
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="groupRepresentativePhone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-blue-700">Representative Phone</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="Representative's phone number" 
+                              className="bg-white border-blue-300 focus:border-blue-500"
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
               </div>
             )}
 
@@ -578,7 +638,7 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled, is
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-sm font-semibold text-slate-700">Work Date</FormLabel>
-                  
+
                   {/* Quick date suggestions */}
                   <div className="grid grid-cols-3 gap-1 mb-2">
                     {suggestedDates.map((suggestion) => (
@@ -597,7 +657,7 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled, is
                       </Button>
                     ))}
                   </div>
-                  
+
                   <FormControl>
                     <Input
                       type="date"
@@ -630,7 +690,7 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled, is
                             <Camera className="h-4 w-4" />
                             Take Photo
                           </Button>
-                          
+
                           <input
                             type="file"
                             accept="image/*"
@@ -645,7 +705,7 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled, is
                             <Upload className="h-4 w-4" />
                             Upload Photo
                           </label>
-                          
+
                           {workImagePreview && (
                             <Button
                               type="button"
@@ -694,7 +754,7 @@ export default function CustomerForm({ initialData, onSubmitted, onCancelled, is
                           </div>
                         )}
                       </div>
-                      
+
                       {/* Image preview */}
                       {workImagePreview && (
                         <div className="relative">
