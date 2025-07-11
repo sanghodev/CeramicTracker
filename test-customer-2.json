@@ -1,9 +1,0 @@
-{
-  "name": "박테스트",
-  "phone": "010-9876-5432",
-  "email": "park@test.com",
-  "workDate": "2025-06-15T14:00:00.000Z",
-  "programType": "advanced_ceramic",
-  "workImage": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==",
-  "customerImage": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="
-}
